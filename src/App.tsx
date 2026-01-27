@@ -7,10 +7,12 @@ import { ServiceClassSelector } from './components/inputs/ServiceClassSelector';
 import { MeteringSelector } from './components/inputs/MeteringSelector';
 import { EVSEInstalled } from './components/inputs/EVSEInstalled';
 import { BillingPeriodInputs } from './components/inputs/BillingPeriodInputs';
+import { RevenueSettings } from './components/inputs/RevenueSettings';
 import { ResultsSummary } from './components/results/ResultsSummary';
 import { SeasonBreakdown } from './components/results/SeasonBreakdown';
 import { YearlyTotal } from './components/results/YearlyTotal';
 import { CostHighlight } from './components/results/CostHighlight';
+import { RevenueResults } from './components/results/RevenueResults';
 import { DownloadButton } from './components/report/DownloadButton';
 import { ProjectsModal } from './components/ProjectsModal';
 import { useProjectStorage } from './hooks/useProjectStorage';
@@ -145,6 +147,11 @@ function App() {
               project={currentProject}
               onUpdate={handleUpdateProject}
             />
+
+            <RevenueSettings
+              project={currentProject}
+              onUpdate={handleUpdateProject}
+            />
           </div>
 
           {/* Right Column - Results */}
@@ -163,6 +170,13 @@ function App() {
                   winter={results.monthly.winter}
                 />
                 <YearlyTotal yearly={results.yearly} />
+
+                {results.revenue && (
+                  <RevenueResults
+                    revenue={results.revenue}
+                    totalAnnualKwh={results.yearly.totalKwh}
+                  />
+                )}
               </>
             ) : (
               <div className="card">

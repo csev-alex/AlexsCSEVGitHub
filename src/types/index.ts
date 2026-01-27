@@ -75,6 +75,12 @@ export interface BillingInputs {
   timePerSessionMinutes: number; // Legacy - kept for backwards compatibility
 }
 
+// Revenue settings for charging EV drivers
+export interface RevenueSettings {
+  costToDriverPerKwh: number; // $/kWh charged to drivers
+  percentTimeChargingDrivers: number; // 0-100, percentage of usage that is paid charging
+}
+
 // Full project state
 export interface Project {
   id: string;
@@ -98,6 +104,9 @@ export interface Project {
 
   // Optional supply rate
   supplyRatePerKwh?: number;
+
+  // Revenue settings for charging EV drivers
+  revenueSettings?: RevenueSettings;
 }
 
 // Rate tier structure
@@ -191,6 +200,17 @@ export interface YearlySummary {
   loadFactor: number;
 }
 
+// Revenue calculation results
+export interface RevenueCalculation {
+  costToDriverPerKwh: number;
+  percentTimeChargingDrivers: number;
+  billableKwh: number; // Total kWh × percent charging drivers
+  grossRevenue: number; // Billable kWh × cost to driver
+  totalEnergyCost: number; // EV PIR delivery + supply costs
+  netRevenue: number; // Gross revenue - total energy cost
+  netRevenuePerKwh: number; // Net revenue / billable kWh
+}
+
 // Full calculation result
 export interface CalculationResult {
   project: Project;
@@ -217,6 +237,7 @@ export interface CalculationResult {
     standardDemandRate: number;
     supplyRate: number;
   };
+  revenue?: RevenueCalculation;
 }
 
 // Default values for new project
@@ -239,6 +260,18 @@ export const DEFAULT_BILLING_INPUTS: BillingInputs = {
   timePerSessionMinutes: 60, // Legacy
 };
 
+// Default revenue settings
+export const DEFAULT_REVENUE_SETTINGS: RevenueSettings = {
+  costToDriverPerKwh: 0.40, // Default for Level 2, will be recalculated based on charger mix
+  percentTimeChargingDrivers: 100,
+};
+
+// Default cost to driver by charger level
+export const DEFAULT_COST_TO_DRIVER = {
+  'Level 2': 0.40,
+  'DCFC (Level 3)': 0.55,
+};
+
 export const DEFAULT_PROJECT: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = {
   name: 'New Project',
   customerName: '',
@@ -249,4 +282,5 @@ export const DEFAULT_PROJECT: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = 
   chargers: [],
   billingInputs: DEFAULT_BILLING_INPUTS,
   supplyRatePerKwh: 0.10,
+  revenueSettings: DEFAULT_REVENUE_SETTINGS,
 };

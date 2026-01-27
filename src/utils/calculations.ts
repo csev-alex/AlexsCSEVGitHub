@@ -6,6 +6,8 @@ import {
   SeasonalSummary,
   YearlySummary,
   TierRates,
+  RevenueCalculation,
+  DEFAULT_REVENUE_SETTINGS,
 } from '../types';
 import { getRateTable } from '../data/rates/nationalGrid';
 import {
@@ -270,6 +272,32 @@ export function calculateStandardMonthly(
 }
 
 /**
+ * Calculate revenue from charging EV drivers
+ */
+export function calculateRevenue(
+  totalAnnualKwh: number,
+  totalEnergyCost: number,
+  costToDriverPerKwh: number,
+  percentTimeChargingDrivers: number
+): RevenueCalculation {
+  const percentDecimal = percentTimeChargingDrivers / 100;
+  const billableKwh = totalAnnualKwh * percentDecimal;
+  const grossRevenue = billableKwh * costToDriverPerKwh;
+  const netRevenue = grossRevenue - totalEnergyCost;
+  const netRevenuePerKwh = billableKwh > 0 ? netRevenue / billableKwh : 0;
+
+  return {
+    costToDriverPerKwh,
+    percentTimeChargingDrivers,
+    billableKwh,
+    grossRevenue,
+    totalEnergyCost,
+    netRevenue,
+    netRevenuePerKwh,
+  };
+}
+
+/**
  * Map old service class names to new ones for backwards compatibility
  */
 function mapServiceClass(serviceClass: string): string {
@@ -511,6 +539,15 @@ export function calculateResults(project: Project): CalculationResult | null {
     loadFactor,
   };
 
+  // Calculate revenue if revenue settings exist
+  const revenueSettings = project.revenueSettings ?? DEFAULT_REVENUE_SETTINGS;
+  const revenue = calculateRevenue(
+    yearlyTotalKwh,
+    yearlyTotalWithSupply, // Total energy cost = EV PIR delivery + supply
+    revenueSettings.costToDriverPerKwh,
+    revenueSettings.percentTimeChargingDrivers
+  );
+
   return {
     project,
     tier,
@@ -536,5 +573,6 @@ export function calculateResults(project: Project): CalculationResult | null {
       standardDemandRate,
       supplyRate,
     },
+    revenue,
   };
 }
