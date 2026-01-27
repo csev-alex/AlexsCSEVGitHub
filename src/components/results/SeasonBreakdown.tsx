@@ -86,12 +86,17 @@ export const SeasonBreakdown: React.FC<SeasonBreakdownProps> = ({
               Time-of-Use Distribution
             </h4>
             <div className="space-y-1 text-sm">
-              {isSummer && data.superPeakKwh !== undefined && (
+              {isSummer && data.superPeakKwh !== undefined ? (
                 <div className="flex justify-between bg-white rounded px-2 py-1">
                   <span className="text-neutral-600">Super-Peak:</span>
                   <span className="font-medium">
                     {formatKwh(data.superPeakKwh)}
                   </span>
+                </div>
+              ) : (
+                <div className={`flex justify-between rounded px-2 py-1 ${bgColor}`}>
+                  <span className="text-neutral-400">&nbsp;</span>
+                  <span className="font-medium">&nbsp;</span>
                 </div>
               )}
               <div className="flex justify-between bg-white rounded px-2 py-1">
@@ -117,12 +122,17 @@ export const SeasonBreakdown: React.FC<SeasonBreakdownProps> = ({
                   {formatCurrency(data.demandCharge)}
                 </span>
               </div>
-              {isSummer && data.superPeakCharge !== undefined && (
+              {isSummer && data.superPeakCharge !== undefined ? (
                 <div className="flex justify-between bg-white rounded px-2 py-1">
                   <span className="text-neutral-600">Super-Peak Energy:</span>
                   <span className="font-medium">
                     {formatCurrency(data.superPeakCharge)}
                   </span>
+                </div>
+              ) : (
+                <div className={`flex justify-between rounded px-2 py-1 ${bgColor}`}>
+                  <span className="text-neutral-400">&nbsp;</span>
+                  <span className="font-medium">&nbsp;</span>
                 </div>
               )}
               <div className="flex justify-between bg-white rounded px-2 py-1">
