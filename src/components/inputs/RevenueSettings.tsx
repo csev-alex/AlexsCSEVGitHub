@@ -41,7 +41,13 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
   }, [project.chargers]);
 
   // Get current settings or use defaults
-  const currentSettings = project.revenueSettings ?? DEFAULT_REVENUE_SETTINGS;
+  const currentSettings = {
+    ...DEFAULT_REVENUE_SETTINGS,
+    ...project.revenueSettings,
+  };
+
+  // Calculate CSEV Rev Share (inverse of customer share)
+  const csevRevSharePercent = 100 - currentSettings.customerRevSharePercent;
 
   // Update cost to driver when chargers change (if user hasn't manually set it)
   useEffect(() => {
@@ -70,6 +76,24 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
       revenueSettings: {
         ...currentSettings,
         percentTimeChargingDrivers: Math.min(100, Math.max(0, value)),
+      },
+    });
+  };
+
+  const handleNetworkFeeChange = (value: number) => {
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        networkFeePercent: Math.min(100, Math.max(0, value)),
+      },
+    });
+  };
+
+  const handleCustomerRevShareChange = (value: number) => {
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        customerRevSharePercent: Math.min(100, Math.max(0, value)),
       },
     });
   };
@@ -184,6 +208,76 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
           </div>
           <p className="text-sm text-neutral-500 mt-1">
             Percentage of total kWh that will be billed to EV drivers (vs. free/employee charging)
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-neutral-200 pt-4">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-3">Revenue Share Settings</h3>
+        </div>
+
+        {/* Network Fee */}
+        <div>
+          <label className="label">Network Fee</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              className="input-field w-24"
+              value={currentSettings.networkFeePercent}
+              onChange={(e) =>
+                handleNetworkFeeChange(parseFloat(e.target.value) || 0)
+              }
+              step="0.5"
+              min="0"
+              max="100"
+            />
+            <span className="text-neutral-600">%</span>
+          </div>
+          <p className="text-sm text-neutral-500 mt-1">
+            Network/processing fee deducted from gross revenue (default: 9%)
+          </p>
+        </div>
+
+        {/* Customer Revenue Share */}
+        <div>
+          <label className="label">Customer Rev Share</label>
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              className="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              value={currentSettings.customerRevSharePercent}
+              onChange={(e) => handleCustomerRevShareChange(parseInt(e.target.value))}
+              min="0"
+              max="100"
+              step="5"
+            />
+            <div className="flex items-center gap-1 w-20">
+              <input
+                type="number"
+                className="input-field w-16 text-center py-1"
+                value={currentSettings.customerRevSharePercent}
+                onChange={(e) =>
+                  handleCustomerRevShareChange(parseInt(e.target.value) || 0)
+                }
+                min="0"
+                max="100"
+              />
+              <span className="text-neutral-600">%</span>
+            </div>
+          </div>
+          <p className="text-sm text-neutral-500 mt-1">
+            Customer's share of net revenue after network fee
+          </p>
+        </div>
+
+        {/* CSEV Revenue Share (Read-only display) */}
+        <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-700">CSEV Rev Share</span>
+            <span className="text-lg font-bold text-primary-600">{csevRevSharePercent}%</span>
+          </div>
+          <p className="text-xs text-neutral-500 mt-1">
+            CSEV's share of net revenue (100% - Customer Rev Share)
           </p>
         </div>
       </div>

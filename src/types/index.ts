@@ -79,6 +79,8 @@ export interface BillingInputs {
 export interface RevenueSettings {
   costToDriverPerKwh: number; // $/kWh charged to drivers
   percentTimeChargingDrivers: number; // 0-100, percentage of usage that is paid charging
+  networkFeePercent: number; // 0-100, network fee percentage (default 9%)
+  customerRevSharePercent: number; // 0-100, customer's share of net revenue after network fee (default 100%)
 }
 
 // Full project state
@@ -206,9 +208,21 @@ export interface RevenueCalculation {
   percentTimeChargingDrivers: number;
   billableKwh: number; // Total kWh × percent charging drivers
   grossRevenue: number; // Billable kWh × cost to driver
+  // Network fee
+  networkFeePercent: number;
+  networkFeeAmount: number; // Gross revenue × network fee %
+  revenueAfterNetworkFee: number; // Gross revenue - network fee
+  // Revenue share split
+  customerRevSharePercent: number;
+  csevRevSharePercent: number; // 100 - customer rev share %
+  customerNetChargingRevenue: number; // Revenue after network fee × customer share %
+  csevNetChargingRevenue: number; // Revenue after network fee × CSEV share %
+  // Final customer revenue
   totalEnergyCost: number; // EV PIR delivery + supply costs
-  netRevenue: number; // Gross revenue - total energy cost
-  netRevenuePerKwh: number; // Net revenue / billable kWh
+  customerFinalRevenue: number; // Customer net charging revenue - energy costs
+  // Monthly breakdowns
+  monthlyGrossRevenue: number;
+  monthlyCustomerFinalRevenue: number;
 }
 
 // Full calculation result
@@ -264,6 +278,8 @@ export const DEFAULT_BILLING_INPUTS: BillingInputs = {
 export const DEFAULT_REVENUE_SETTINGS: RevenueSettings = {
   costToDriverPerKwh: 0.40, // Default for Level 2, will be recalculated based on charger mix
   percentTimeChargingDrivers: 100,
+  networkFeePercent: 9.00, // Default 9% network fee
+  customerRevSharePercent: 100, // Default 100% to customer
 };
 
 // Default cost to driver by charger level

@@ -272,28 +272,61 @@ export function calculateStandardMonthly(
 }
 
 /**
+ * Round to 2 decimal places for currency calculations
+ */
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
  * Calculate revenue from charging EV drivers
  */
 export function calculateRevenue(
   totalAnnualKwh: number,
   totalEnergyCost: number,
   costToDriverPerKwh: number,
-  percentTimeChargingDrivers: number
+  percentTimeChargingDrivers: number,
+  networkFeePercent: number,
+  customerRevSharePercent: number
 ): RevenueCalculation {
   const percentDecimal = percentTimeChargingDrivers / 100;
-  const billableKwh = totalAnnualKwh * percentDecimal;
-  const grossRevenue = billableKwh * costToDriverPerKwh;
-  const netRevenue = grossRevenue - totalEnergyCost;
-  const netRevenuePerKwh = billableKwh > 0 ? netRevenue / billableKwh : 0;
+  const billableKwh = roundCurrency(totalAnnualKwh * percentDecimal);
+
+  // Gross revenue - round after multiplication to fix precision issues
+  const grossRevenue = roundCurrency(billableKwh * costToDriverPerKwh);
+
+  // Network fee deduction
+  const networkFeeAmount = roundCurrency(grossRevenue * (networkFeePercent / 100));
+  const revenueAfterNetworkFee = roundCurrency(grossRevenue - networkFeeAmount);
+
+  // Revenue share split
+  const csevRevSharePercent = 100 - customerRevSharePercent;
+  const customerNetChargingRevenue = roundCurrency(revenueAfterNetworkFee * (customerRevSharePercent / 100));
+  const csevNetChargingRevenue = roundCurrency(revenueAfterNetworkFee * (csevRevSharePercent / 100));
+
+  // Final customer revenue after energy costs
+  const customerFinalRevenue = roundCurrency(customerNetChargingRevenue - totalEnergyCost);
+
+  // Monthly breakdowns (divide annual by 12)
+  const monthlyGrossRevenue = roundCurrency(grossRevenue / 12);
+  const monthlyCustomerFinalRevenue = roundCurrency(customerFinalRevenue / 12);
 
   return {
     costToDriverPerKwh,
     percentTimeChargingDrivers,
     billableKwh,
     grossRevenue,
+    networkFeePercent,
+    networkFeeAmount,
+    revenueAfterNetworkFee,
+    customerRevSharePercent,
+    csevRevSharePercent,
+    customerNetChargingRevenue,
+    csevNetChargingRevenue,
     totalEnergyCost,
-    netRevenue,
-    netRevenuePerKwh,
+    customerFinalRevenue,
+    monthlyGrossRevenue,
+    monthlyCustomerFinalRevenue,
   };
 }
 
@@ -545,7 +578,9 @@ export function calculateResults(project: Project): CalculationResult | null {
     yearlyTotalKwh,
     yearlyTotalWithSupply, // Total energy cost = EV PIR delivery + supply
     revenueSettings.costToDriverPerKwh,
-    revenueSettings.percentTimeChargingDrivers
+    revenueSettings.percentTimeChargingDrivers,
+    revenueSettings.networkFeePercent ?? DEFAULT_REVENUE_SETTINGS.networkFeePercent,
+    revenueSettings.customerRevSharePercent ?? DEFAULT_REVENUE_SETTINGS.customerRevSharePercent
   );
 
   return {
