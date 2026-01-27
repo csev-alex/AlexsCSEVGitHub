@@ -712,8 +712,8 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
               <View style={styles.revenueBody}>
                 <Text style={styles.sectionLabel}>REVENUE</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Billable kWh</Text>
-                  <Text style={styles.rowValue}>{formatKwh(results.revenue?.billableKwh ?? 0)}</Text>
+                  <Text style={styles.rowLabel}>Annual Billable kWh</Text>
+                  <Text style={styles.rowValue}>{formatKwh(results.yearly.totalKwh * (results.revenue?.percentTimeChargingDrivers ?? 100) / 100)}</Text>
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Annual Gross Rev</Text>
@@ -725,37 +725,27 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowLabel}>Network Fee ({results.revenue?.networkFeePercent}%)</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.networkFeeAmount ?? 0)}</Text>
                 </View>
-                {(results.revenue?.customerRevSharePercent ?? 100) < 100 && (
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Cust Share ({results.revenue?.customerRevSharePercent}%)</Text>
-                    <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
-                  </View>
-                )}
-                {(results.revenue?.customerRevSharePercent ?? 100) >= 100 && (
-                  <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
-                    <Text style={styles.rowLabel}> </Text>
-                    <Text style={styles.rowValue}> </Text>
-                  </View>
-                )}
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Cust Share ({results.revenue?.customerRevSharePercent}%)</Text>
+                  <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
+                </View>
+                {/* Spacer row to align COSTS with DELIVERY in Winter */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
 
                 <Text style={styles.sectionLabel}>COSTS</Text>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Energy Costs</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.totalEnergyCost ?? 0)}</Text>
                 </View>
-                {/* Spacer row */}
-                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
-                </View>
 
-                {/* Annual Cust Rev - Gross minus Network Fees (before energy costs) - Medium Green */}
-                <View style={[styles.totalRow, styles.revenueMediumRow]}>
-                  <Text style={[styles.totalLabel, { color: '#166534' }]}>Annual Cust Rev</Text>
-                  <Text style={[styles.totalValue, { color: '#166534' }]}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
+                <Text style={styles.sectionLabel}>PROFITABILITY</Text>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Annual Cust Rev</Text>
+                  <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
                 </View>
-
-                {/* Monthly Cust Rev */}
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Monthly Cust Rev</Text>
                   <Text style={styles.rowValue}>{formatCurrency((results.revenue?.customerNetChargingRevenue ?? 0) / 12)}</Text>
