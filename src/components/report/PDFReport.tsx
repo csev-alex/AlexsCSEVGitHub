@@ -737,24 +737,27 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                 )}
 
                 <Text style={styles.sectionLabel}>COSTS</Text>
-                {/* Spacer row to align with summer/winter - light green background */}
-                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
-                </View>
-                {/* Spacer row to align with summer/winter - light green background */}
-                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
-                </View>
-                {/* Spacer row to align with summer/winter - light green background */}
-                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
-                </View>
+                {/* Energy Costs - aligned with Demand row in Winter */}
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Energy Costs</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.totalEnergyCost ?? 0)}</Text>
+                </View>
+                {/* Spacer rows to align with winter's On-Peak, Off-Peak, and Supply section */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
                 </View>
 
                 {/* Annual Cust Revenue - Medium Green */}
@@ -763,7 +766,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={[styles.totalValue, { color: '#166534' }]}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
                 </View>
 
-                {/* Monthly Avg Revenue - Dark Green (prominent) */}
+                {/* Monthly Avg Revenue - Dark Green (prominent) - aligned with Monthly row in Winter */}
                 <View style={styles.revenueHighlight}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2, paddingHorizontal: 4 }}>
                     <Text style={[styles.totalLabel, { color: '#fff' }]}>Monthly Avg Revenue</Text>
