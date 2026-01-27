@@ -736,6 +736,21 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                 )}
 
                 <Text style={styles.sectionLabel}>COSTS</Text>
+                {/* Spacer row to align with summer/winter - light green background */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                {/* Spacer row to align with summer/winter - light green background */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                {/* Spacer row to align with summer/winter - light green background */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Energy Costs</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.totalEnergyCost ?? 0)}</Text>
@@ -755,16 +770,6 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                       {formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}
                     </Text>
                   </View>
-                </View>
-
-                {/* Spacer rows to match height of summer/winter columns */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
-                </View>
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}> </Text>
-                  <Text style={styles.rowValue}> </Text>
                 </View>
               </View>
             </View>
