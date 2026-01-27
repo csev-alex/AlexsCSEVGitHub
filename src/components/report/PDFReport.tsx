@@ -427,36 +427,37 @@ interface PDFReportProps {
 export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
   const { project, yearly, ratesUsed, monthly } = results;
 
-  // Calculate monthly customer revenue (before deducting energy costs)
-  const monthlyCustomerRevenue = (results.revenue?.customerNetChargingRevenue ?? 0) / 12;
+  // Monthly profit (customer final revenue after all deductions including energy costs)
   const monthlyProfit = results.revenue?.monthlyCustomerFinalRevenue ?? 0;
 
   // Calculate max cost for chart scaling - January to December order
   const monthlyData = [
-    { label: 'Jan', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Feb', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Mar', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Apr', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'May', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Jun', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Jul', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Aug', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Sep', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Oct', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Nov', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
-    { label: 'Dec', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, revenue: monthlyCustomerRevenue, profit: monthlyProfit },
+    { label: 'Jan', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Feb', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Mar', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Apr', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'May', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Jun', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, profit: monthlyProfit },
+    { label: 'Jul', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, profit: monthlyProfit },
+    { label: 'Aug', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, profit: monthlyProfit },
+    { label: 'Sep', delivery: monthly.summer.totalEvPirCost, supply: monthly.summer.supplyCharge, isSummer: true, profit: monthlyProfit },
+    { label: 'Oct', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Nov', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
+    { label: 'Dec', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
   ];
 
-  // Calculate running cumulative profit
-  let runningProfit = 0;
+  // Calculate running cumulative net revenue for the line plot
+  let runningNetRevenue = 0;
   const monthlyDataWithCumulative = monthlyData.map((month) => {
-    runningProfit += month.profit;
-    return { ...month, cumulativeProfit: runningProfit };
+    runningNetRevenue += month.profit;
+    return { ...month, cumulativeNetRevenue: runningNetRevenue };
   });
 
-  const maxCost = Math.max(...monthlyData.map(d => Math.max(d.delivery + d.supply, d.revenue)));
-  const maxCumulativeProfit = Math.max(...monthlyDataWithCumulative.map(d => Math.abs(d.cumulativeProfit)));
-  const minCumulativeProfit = Math.min(...monthlyDataWithCumulative.map(d => d.cumulativeProfit));
+  // For bar scaling, use max of costs or profit (use absolute value for negative profits)
+  const maxBarValue = Math.max(...monthlyData.map(d => Math.max(d.delivery + d.supply, Math.abs(d.profit))));
+  // For line scaling, use the range of cumulative values
+  const maxCumulativeRevenue = Math.max(...monthlyDataWithCumulative.map(d => d.cumulativeNetRevenue));
+  const minCumulativeRevenue = Math.min(...monthlyDataWithCumulative.map(d => d.cumulativeNetRevenue));
 
   return (
     <Document>
@@ -776,22 +777,23 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
           </View>
         </View>
 
-        {/* Monthly Cost & Revenue Chart */}
+        {/* Monthly Cost & Profit Chart */}
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Monthly Cost vs Revenue & Cumulative Profit</Text>
+          <Text style={styles.chartTitle}>Monthly Cost vs Profit & Running Net Revenue</Text>
           <View style={styles.chartWrapper}>
             <View style={styles.chartArea}>
               {monthlyDataWithCumulative.map((month, idx) => {
                 const costTotal = month.delivery + month.supply;
-                const costHeight = (costTotal / maxCost) * 100;
-                const deliveryHeight = (month.delivery / costTotal) * 100;
-                const supplyHeight = (month.supply / costTotal) * 100;
-                const revenueHeight = (month.revenue / maxCost) * 100;
+                const costHeight = (costTotal / maxBarValue) * 100;
+                const deliveryHeight = costTotal > 0 ? (month.delivery / costTotal) * 100 : 0;
+                const supplyHeight = costTotal > 0 ? (month.supply / costTotal) * 100 : 0;
+                const profitHeight = (Math.abs(month.profit) / maxBarValue) * 100;
+                const isProfitPositive = month.profit >= 0;
 
-                // Calculate cumulative profit line position (0-100% where 50% is zero line if there are negative values)
-                const profitRange = maxCumulativeProfit - minCumulativeProfit;
-                const profitPosition = profitRange > 0
-                  ? ((month.cumulativeProfit - minCumulativeProfit) / profitRange) * 70 + 10 // 10-80% range
+                // Calculate running net revenue line position (0-100% where position reflects cumulative value)
+                const revenueRange = maxCumulativeRevenue - minCumulativeRevenue;
+                const linePosition = revenueRange > 0
+                  ? ((month.cumulativeNetRevenue - minCumulativeRevenue) / revenueRange) * 70 + 10 // 10-80% range
                   : 50;
 
                 // Format as short currency (no cents for larger values)
@@ -808,10 +810,10 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                     ]}
                   >
                     <View style={styles.chartBarWrapper}>
-                      {/* Cumulative profit point */}
+                      {/* Running net revenue point */}
                       <View style={{
                         position: 'absolute',
-                        bottom: `${profitPosition}%`,
+                        bottom: `${linePosition}%`,
                         left: '50%',
                         marginLeft: -3,
                         width: 6,
@@ -820,20 +822,22 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                         backgroundColor: '#f59e0b',
                         zIndex: 10,
                       }} />
-                      {/* Line connecting points (simplified - just show points) */}
 
-                      <Text style={[styles.chartValueLabel, { fontSize: 5 }]}>{formatShort(month.cumulativeProfit)}</Text>
+                      <Text style={[styles.chartValueLabel, { fontSize: 5 }]}>{formatShort(month.cumulativeNetRevenue)}</Text>
 
-                      {/* Cost and Revenue bars side by side */}
+                      {/* Cost and Profit bars side by side */}
                       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: '85%', gap: 1 }}>
                         {/* Cost bar (stacked) */}
                         <View style={[styles.chartBar, { height: `${costHeight}%`, width: 10 }]}>
                           <View style={[styles.chartBarSupply, { height: `${supplyHeight}%` }]} />
                           <View style={[styles.chartBarDelivery, { height: `${deliveryHeight}%` }]} />
                         </View>
-                        {/* Revenue bar */}
-                        <View style={[styles.chartBar, { height: `${revenueHeight}%`, width: 10 }]}>
-                          <View style={[styles.chartBarRevenue, { height: '100%' }]} />
+                        {/* Monthly Profit bar */}
+                        <View style={[styles.chartBar, { height: `${profitHeight}%`, width: 10 }]}>
+                          <View style={[
+                            isProfitPositive ? styles.chartBarRevenue : { backgroundColor: '#ef4444', width: '100%' },
+                            { height: '100%' }
+                          ]} />
                         </View>
                       </View>
                     </View>
@@ -858,11 +862,11 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendBox, { backgroundColor: '#4CBC88' }]} />
-              <Text style={styles.legendText}>Cust Revenue</Text>
+              <Text style={styles.legendText}>Monthly Profit</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendBox, { backgroundColor: '#f59e0b', borderRadius: 4 }]} />
-              <Text style={styles.legendText}>Cumulative Profit</Text>
+              <Text style={styles.legendText}>Running Net Revenue</Text>
             </View>
           </View>
         </View>
