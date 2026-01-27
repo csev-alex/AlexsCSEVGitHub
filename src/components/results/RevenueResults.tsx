@@ -115,26 +115,16 @@ export const RevenueResults: React.FC<RevenueResultsProps> = ({
           </span>
         </div>
 
-        {/* Revenue Share Split */}
+        {/* Revenue Share Split - only show customer share when less than 100% */}
         {revenue.customerRevSharePercent < 100 && (
-          <>
-            <div className="flex justify-between items-center py-2 border-b border-neutral-100">
-              <span className="text-neutral-600">
-                Customer Share ({revenue.customerRevSharePercent}%)
-              </span>
-              <span className="font-medium text-neutral-900">
-                {formatCurrency(revenue.customerNetChargingRevenue)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-neutral-200">
-              <span className="text-neutral-600">
-                CSEV Share ({revenue.csevRevSharePercent}%)
-              </span>
-              <span className="font-medium text-primary-600">
-                {formatCurrency(revenue.csevNetChargingRevenue)}
-              </span>
-            </div>
-          </>
+          <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span className="text-neutral-600">
+              Customer Share ({revenue.customerRevSharePercent}%)
+            </span>
+            <span className="font-medium text-neutral-900">
+              {formatCurrency(revenue.customerNetChargingRevenue)}
+            </span>
+          </div>
         )}
 
         {/* Customer Net Charging Revenue */}

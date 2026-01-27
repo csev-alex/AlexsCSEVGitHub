@@ -51,23 +51,30 @@ const styles = StyleSheet.create({
     color: '#868e96',
     marginTop: 2,
   },
-  // Project info - compact inline
+  // Project info - compact inline with better spacing
   projectInfoRow: {
     flexDirection: 'row',
-    marginBottom: 6,
-    gap: 15,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   projectInfoItem: {
     flexDirection: 'row',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 3,
+    marginRight: 4,
   },
   projectLabel: {
     color: '#666',
-    fontSize: 8,
+    fontSize: 7,
   },
   projectValue: {
     fontWeight: 'bold',
-    fontSize: 8,
+    fontSize: 7,
     marginLeft: 3,
+    maxWidth: 80,
   },
   // Usage assumptions summary
   usageAssumptions: {
@@ -113,13 +120,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212529',
   },
-  // Two column layout
-  twoColumn: {
+  // Three column layout
+  threeColumn: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 6,
   },
-  column: {
-    flex: 1,
+  columnNarrow: {
+    flex: 0.35,
+  },
+  columnWide: {
+    flex: 0.30,
   },
   // Season cards
   seasonCard: {
@@ -351,6 +361,36 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 1.3,
   },
+  // Revenue section styles
+  revenueCard: {
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  revenueHeader: {
+    backgroundColor: '#4CBC88',
+    padding: 6,
+  },
+  revenueBody: {
+    backgroundColor: '#f0fdf4',
+    padding: 6,
+  },
+  revenueTotalRow: {
+    backgroundColor: '#4CBC88',
+  },
+  revenuePositive: {
+    color: '#166534',
+  },
+  revenueNegative: {
+    color: '#dc2626',
+  },
+  revenueHighlight: {
+    backgroundColor: '#dcfce7',
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    marginTop: 3,
+    borderRadius: 2,
+  },
 });
 
 interface PDFReportProps {
@@ -488,27 +528,27 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
           </View>
         </View>
 
-        {/* Two Column Layout: Summer & Winter */}
-        <View style={styles.twoColumn}>
+        {/* Three Column Layout: Summer, Winter & Revenue */}
+        <View style={styles.threeColumn}>
           {/* Summer Column */}
-          <View style={styles.column}>
+          <View style={styles.columnNarrow}>
             <View style={styles.seasonCard}>
               <View style={styles.summerHeader}>
                 <Text style={styles.seasonTitle}>Summer (Jun-Sep)</Text>
                 <Text style={styles.seasonSubtitle}>4 months • Monthly Avg</Text>
               </View>
               <View style={styles.summerBody}>
-                <Text style={styles.sectionLabel}>MONTHLY USAGE</Text>
+                <Text style={styles.sectionLabel}>USAGE</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Total kWh</Text>
+                  <Text style={styles.rowLabel}>kWh</Text>
                   <Text style={styles.rowValue}>{formatKwh(monthly.summer.totalKwh)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Peak Demand</Text>
+                  <Text style={styles.rowLabel}>Demand</Text>
                   <Text style={styles.rowValue}>{formatKw(monthly.summer.demandKw)}</Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>TOU DISTRIBUTION</Text>
+                <Text style={styles.sectionLabel}>TOU</Text>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Super-Peak</Text>
                   <Text style={styles.rowValue}>{formatKwh(monthly.summer.superPeakKwh ?? 0)}</Text>
@@ -522,36 +562,32 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowValue}>{formatKwh(monthly.summer.offPeakKwh)}</Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>DELIVERY CHARGES</Text>
+                <Text style={styles.sectionLabel}>DELIVERY</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Demand Charge</Text>
+                  <Text style={styles.rowLabel}>Demand</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.summer.demandCharge)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Super-Peak Energy</Text>
+                  <Text style={styles.rowLabel}>Super-Peak</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.summer.superPeakCharge ?? 0)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>On-Peak Energy</Text>
+                  <Text style={styles.rowLabel}>On-Peak</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.summer.onPeakCharge)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Off-Peak Energy</Text>
+                  <Text style={styles.rowLabel}>Off-Peak</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.summer.offPeakCharge)}</Text>
                 </View>
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Delivery Subtotal</Text>
-                  <Text style={styles.rowValue}>{formatCurrency(monthly.summer.totalEvPirCost)}</Text>
-                </View>
 
-                <Text style={styles.sectionLabel}>SUPPLY CHARGE</Text>
+                <Text style={styles.sectionLabel}>SUPPLY</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Supply ({formatKwh(monthly.summer.totalKwh)})</Text>
+                  <Text style={styles.rowLabel}>Energy</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.summer.supplyCharge)}</Text>
                 </View>
 
                 <View style={[styles.totalRow, styles.summerTotalRow]}>
-                  <Text style={styles.totalLabel}>Total Monthly</Text>
+                  <Text style={styles.totalLabel}>Monthly</Text>
                   <Text style={styles.totalValue}>{formatCurrency(monthly.summer.totalWithSupply)}</Text>
                 </View>
               </View>
@@ -559,24 +595,24 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
           </View>
 
           {/* Winter Column */}
-          <View style={styles.column}>
+          <View style={styles.columnNarrow}>
             <View style={styles.seasonCard}>
               <View style={styles.winterHeader}>
                 <Text style={styles.seasonTitle}>Winter (Oct-May)</Text>
                 <Text style={styles.seasonSubtitle}>8 months • Monthly Avg</Text>
               </View>
               <View style={styles.winterBody}>
-                <Text style={styles.sectionLabel}>MONTHLY USAGE</Text>
+                <Text style={styles.sectionLabel}>USAGE</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Total kWh</Text>
+                  <Text style={styles.rowLabel}>kWh</Text>
                   <Text style={styles.rowValue}>{formatKwh(monthly.winter.totalKwh)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Peak Demand</Text>
+                  <Text style={styles.rowLabel}>Demand</Text>
                   <Text style={styles.rowValue}>{formatKw(monthly.winter.demandKw)}</Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>TOU DISTRIBUTION</Text>
+                <Text style={styles.sectionLabel}>TOU</Text>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}> </Text>
                   <Text style={styles.rowValue}> </Text>
@@ -590,9 +626,9 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowValue}>{formatKwh(monthly.winter.offPeakKwh)}</Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>DELIVERY CHARGES</Text>
+                <Text style={styles.sectionLabel}>DELIVERY</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Demand Charge</Text>
+                  <Text style={styles.rowLabel}>Demand</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.winter.demandCharge)}</Text>
                 </View>
                 <View style={styles.row}>
@@ -600,27 +636,82 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowValue}> </Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>On-Peak Energy</Text>
+                  <Text style={styles.rowLabel}>On-Peak</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.winter.onPeakCharge)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Off-Peak Energy</Text>
+                  <Text style={styles.rowLabel}>Off-Peak</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.winter.offPeakCharge)}</Text>
                 </View>
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Delivery Subtotal</Text>
-                  <Text style={styles.rowValue}>{formatCurrency(monthly.winter.totalEvPirCost)}</Text>
-                </View>
 
-                <Text style={styles.sectionLabel}>SUPPLY CHARGE</Text>
+                <Text style={styles.sectionLabel}>SUPPLY</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Supply ({formatKwh(monthly.winter.totalKwh)})</Text>
+                  <Text style={styles.rowLabel}>Energy</Text>
                   <Text style={styles.rowValue}>{formatCurrency(monthly.winter.supplyCharge)}</Text>
                 </View>
 
                 <View style={[styles.totalRow, styles.winterTotalRow]}>
-                  <Text style={styles.totalLabel}>Total Monthly</Text>
+                  <Text style={styles.totalLabel}>Monthly</Text>
                   <Text style={styles.totalValue}>{formatCurrency(monthly.winter.totalWithSupply)}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Revenue Column */}
+          <View style={styles.columnWide}>
+            <View style={styles.revenueCard}>
+              <View style={styles.revenueHeader}>
+                <Text style={[styles.seasonTitle, { color: '#fff' }]}>Annual Revenue</Text>
+                <Text style={[styles.seasonSubtitle, { color: '#a7f3d0' }]}>
+                  ${results.revenue?.costToDriverPerKwh.toFixed(2)}/kWh • {results.revenue?.percentTimeChargingDrivers}% paid
+                </Text>
+              </View>
+              <View style={styles.revenueBody}>
+                <Text style={styles.sectionLabel}>REVENUE</Text>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Billable kWh</Text>
+                  <Text style={styles.rowValue}>{formatKwh(results.revenue?.billableKwh ?? 0)}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Gross Revenue</Text>
+                  <Text style={[styles.rowValue, styles.revenuePositive]}>{formatCurrency(results.revenue?.grossRevenue ?? 0)}</Text>
+                </View>
+
+                <Text style={styles.sectionLabel}>DEDUCTIONS</Text>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Network Fee ({results.revenue?.networkFeePercent}%)</Text>
+                  <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.networkFeeAmount ?? 0)}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Net After Fee</Text>
+                  <Text style={styles.rowValue}>{formatCurrency(results.revenue?.revenueAfterNetworkFee ?? 0)}</Text>
+                </View>
+                {(results.revenue?.customerRevSharePercent ?? 100) < 100 && (
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Cust Share ({results.revenue?.customerRevSharePercent}%)</Text>
+                    <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
+                  </View>
+                )}
+
+                <Text style={styles.sectionLabel}>COSTS</Text>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Energy Costs</Text>
+                  <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.totalEnergyCost ?? 0)}</Text>
+                </View>
+
+                <View style={[styles.totalRow, styles.revenueTotalRow]}>
+                  <Text style={[styles.totalLabel, { color: '#fff' }]}>Customer Revenue</Text>
+                  <Text style={[styles.totalValue, { color: '#fff' }]}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
+                </View>
+
+                <View style={styles.revenueHighlight}>
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Monthly Avg</Text>
+                    <Text style={[styles.rowValue, (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? styles.revenuePositive : styles.revenueNegative]}>
+                      {formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
