@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
   // Usage assumptions summary
   usageAssumptions: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f0fdf4',
     borderWidth: 1,
     borderColor: '#4CBC88',
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
   },
   assumptionItem: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   assumptionLabel: {
     fontSize: 7,
@@ -438,7 +440,10 @@ interface PDFReportProps {
 }
 
 export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
-  const { project, yearly, ratesUsed, monthly } = results;
+  const { project, yearly, ratesUsed, monthly, tenYearProjection } = results;
+
+  // Check if this is a Site Host project
+  const isSiteHost = project.ownershipType === 'site-host';
 
   // Monthly customer profit for chart
   const monthlyProfit = results.revenue?.monthlyCustomerFinalRevenue ?? 0;
@@ -447,8 +452,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
   const isHotel = project.revenueSettings?.industryType === 'Hotel/Hospitality';
   const monthlyBookingProfit = isHotel
     ? (project.revenueSettings?.additionalMonthlyBookings ?? 20) *
-      (project.revenueSettings?.bookingProfit ?? 100) *
-      ((project.revenueSettings?.bookingMargin ?? 75) / 100)
+      (project.revenueSettings?.bookingProfitPerBooking ?? 100)
     : 0;
 
   // Calculate max cost for chart scaling - January to December order
@@ -526,6 +530,19 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
             <Text style={styles.assumptionLabel}>Peak Ports Simultaneous:</Text>
             <Text style={styles.assumptionValue}>{project.billingInputs.peakPortsUsed}</Text>
           </View>
+          {project.ownershipType === 'site-host' && (
+            <View style={{
+              backgroundColor: '#ECECEC',
+              borderWidth: 1,
+              borderColor: '#B9BAB8',
+              borderRadius: 3,
+              paddingHorizontal: 6,
+              paddingVertical: 3,
+              marginLeft: 8,
+            }}>
+              <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#4b5563' }}>CSEV PAYS ELECTRIC</Text>
+            </View>
+          )}
         </View>
 
         {/* Equipment Summary */}
@@ -638,7 +655,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                 </View>
 
                 <View style={[styles.totalRow, styles.summerTotalRow]}>
-                  <Text style={styles.totalLabel}>Monthly</Text>
+                  <Text style={styles.totalLabel}>{isSiteHost ? 'Monthly (Paid by CSEV)' : 'Monthly'}</Text>
                   <Text style={styles.totalValue}>{formatCurrency(monthly.summer.totalWithSupply)}</Text>
                 </View>
               </View>
@@ -702,7 +719,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                 </View>
 
                 <View style={[styles.totalRow, styles.winterTotalRow]}>
-                  <Text style={styles.totalLabel}>Monthly</Text>
+                  <Text style={styles.totalLabel}>{isSiteHost ? 'Monthly (Paid by CSEV)' : 'Monthly'}</Text>
                   <Text style={styles.totalValue}>{formatCurrency(monthly.winter.totalWithSupply)}</Text>
                 </View>
               </View>
@@ -721,11 +738,11 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
               <View style={styles.revenueBody}>
                 <Text style={styles.sectionLabel}>REVENUE</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Billable kWh</Text>
+                  <Text style={styles.rowLabel}>{isSiteHost ? 'Year 1 Billable kWh' : 'Annual Billable kWh'}</Text>
                   <Text style={styles.rowValue}>{formatKwh(results.estimatedAnnualKwh)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Gross Rev</Text>
+                  <Text style={styles.rowLabel}>{isSiteHost ? 'Year 1 Usage Rev' : 'Annual Gross Rev'}</Text>
                   <Text style={[styles.rowValue, styles.revenuePositive]}>{formatCurrency(results.revenue?.grossRevenue ?? 0)}</Text>
                 </View>
 
@@ -735,7 +752,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.networkFeeAmount ?? 0)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Site Rev Share ({results.revenue?.customerRevSharePercent}%)</Text>
+                  <Text style={styles.rowLabel}>{isSiteHost ? 'Year 1 Gross Rev' : `Site Rev Share (${results.revenue?.customerRevSharePercent}%)`}</Text>
                   <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
                 </View>
                 {/* Blank row to align with Winter TOU section */}
@@ -744,13 +761,13 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowValue}> </Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>COSTS</Text>
+                <Text style={styles.sectionLabel}>{isSiteHost ? 'CSEV ENERGY COSTS' : 'COSTS'}</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Delivery Cost</Text>
+                  <Text style={styles.rowLabel}>{isSiteHost ? 'Year 1 Delivery Cost' : 'Annual Delivery Cost'}</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.yearly.totalEvPirCost)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Supply Cost</Text>
+                  <Text style={styles.rowLabel}>{isSiteHost ? 'Year 1 Supply Cost' : 'Annual Supply Cost'}</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.yearly.totalSupplyCharge)}</Text>
                 </View>
                 {/* Spacer rows to align with Winter DELIVERY section */}
@@ -763,17 +780,41 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                   <Text style={styles.rowValue}> </Text>
                 </View>
 
-                <Text style={styles.sectionLabel}>PROFITABILITY</Text>
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Charging Net</Text>
-                  <Text style={[styles.rowValue, (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? styles.revenuePositive : styles.revenueNegative]}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
-                </View>
-
-                {/* Monthly Charging Net - Green when positive, Red when negative */}
-                <View style={[styles.totalRow, (results.revenue?.monthlyCustomerFinalRevenue ?? 0) >= 0 ? styles.revenueTotalRow : { backgroundColor: '#dc2626' }]}>
-                  <Text style={[styles.totalLabel, { color: '#fff' }]}>Monthly Charging Net</Text>
-                  <Text style={[styles.totalValue, { color: '#fff' }]}>{formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}</Text>
-                </View>
+                {isSiteHost ? (
+                  <>
+                    <Text style={styles.sectionLabel}>PAYOUT COMPARISON (HIGHER ONLY)</Text>
+                    {(() => {
+                      const leasePercent = project.siteHostSettings?.revenueSharePercent ?? 10;
+                      const custRevShare = (results.revenue?.revenueAfterNetworkFee ?? 0) * (leasePercent / 100);
+                      const baseRent = tenYearProjection?.[0]?.baseRent ?? 0;
+                      const revShareIsHigher = custRevShare > baseRent;
+                      return (
+                        <>
+                          <View style={[styles.row, revShareIsHigher ? { backgroundColor: '#a36eff' } : {}]}>
+                            <Text style={[styles.rowLabel, revShareIsHigher ? { color: '#fff' } : {}]}>Cust Rev Share ({leasePercent}%)</Text>
+                            <Text style={[styles.rowValue, revShareIsHigher ? { color: '#fff', fontWeight: 'bold' } : {}]}>{formatCurrency(custRevShare)}</Text>
+                          </View>
+                          <View style={[styles.row, !revShareIsHigher ? { backgroundColor: '#a36eff' } : {}]}>
+                            <Text style={[styles.rowLabel, !revShareIsHigher ? { color: '#fff' } : {}]}>Year 1 Base Rent</Text>
+                            <Text style={[styles.rowValue, !revShareIsHigher ? { color: '#fff', fontWeight: 'bold' } : {}]}>{formatCurrency(baseRent)}</Text>
+                          </View>
+                        </>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.sectionLabel}>PROFITABILITY</Text>
+                    <View style={styles.row}>
+                      <Text style={styles.rowLabel}>Annual Charging Net</Text>
+                      <Text style={[styles.rowValue, (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? styles.revenuePositive : styles.revenueNegative]}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
+                    </View>
+                    <View style={[styles.totalRow, (results.revenue?.monthlyCustomerFinalRevenue ?? 0) >= 0 ? styles.revenueTotalRow : { backgroundColor: '#dc2626' }]}>
+                      <Text style={[styles.totalLabel, { color: '#fff' }]}>Monthly Charging Net</Text>
+                      <Text style={[styles.totalValue, { color: '#fff' }]}>{formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}</Text>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
           </View>
@@ -782,10 +823,8 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
         {/* Hotel/Hospitality Booking Revenue Section - only show when industry is Hotel/Hospitality */}
         {project.revenueSettings?.industryType === 'Hotel/Hospitality' && (() => {
           const bookings = project.revenueSettings?.additionalMonthlyBookings ?? 20;
-          const profit = project.revenueSettings?.bookingProfit ?? 100;
-          const margin = project.revenueSettings?.bookingMargin ?? 75;
-          const effectiveProfitPerBooking = profit * (margin / 100);
-          const monthlyBookingRevenue = bookings * effectiveProfitPerBooking;
+          const profitPerBooking = project.revenueSettings?.bookingProfitPerBooking ?? 100;
+          const monthlyBookingRevenue = bookings * profitPerBooking;
           const annualBookingRevenue = monthlyBookingRevenue * 12;
           return (
             <View style={{
@@ -807,7 +846,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
               </View>
               <View style={styles.assumptionItem}>
                 <Text style={styles.assumptionLabel}>Profit/Booking:</Text>
-                <Text style={styles.assumptionValue}>{formatCurrency(effectiveProfitPerBooking)}</Text>
+                <Text style={styles.assumptionValue}>{formatCurrency(profitPerBooking)}</Text>
               </View>
               <View style={styles.assumptionItem}>
                 <Text style={styles.assumptionLabel}>Add'l Monthly Profit:</Text>
@@ -821,7 +860,8 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
           );
         })()}
 
-        {/* Monthly Waterfall Chart */}
+        {/* Monthly Waterfall Chart - only for Customer Owned */}
+        {!isSiteHost && (
         <View style={styles.chartContainer}>
           <Text style={[styles.chartTitle, { marginBottom: 6 }]}>ESTIMATED SITE PROFITABILITY</Text>
           {(() => {
@@ -1023,84 +1063,259 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
             );
           })()}
         </View>
+        )}
 
-        {/* Site Summary */}
+        {/* 10-Year Site Host Projection Chart */}
+        {isSiteHost && tenYearProjection && tenYearProjection.length > 0 && (
+        <View style={styles.chartContainer}>
+          <Text style={[styles.chartTitle, { marginBottom: 6 }]}>10-YEAR SITE HOST REVENUE PROJECTION</Text>
+          {(() => {
+            const isHotelSiteHost = project.revenueSettings?.industryType === 'Hotel/Hospitality';
+
+            // Format currency for labels
+            const formatShort = (val: number) => {
+              if (Math.abs(val) >= 1000000) {
+                return `$${(val / 1000000).toFixed(1)}M`;
+              } else if (Math.abs(val) >= 1000) {
+                return `$${(val / 1000).toFixed(1)}k`;
+              }
+              return `$${val.toFixed(0)}`;
+            };
+
+            // Prepare chart data - show customer revenue (MAX of base rent or rev share) + booking profit
+            const chartData = tenYearProjection.map(yearData => {
+              const baseRent = yearData.baseRent;
+              const revShare = yearData.revenueShareAmount ?? 0;
+              const isRevShareHigher = revShare > baseRent;
+              const customerRevenue = yearData.customerRevenue; // MAX(baseRent, revShare)
+              const bookingProfit = yearData.bookingProfit ?? 0;
+              const totalProfit = isHotelSiteHost
+                ? (yearData.totalCustomerProfit ?? customerRevenue)
+                : customerRevenue;
+
+              return {
+                year: yearData.year,
+                baseRent,
+                revShare,
+                isRevShareHigher,
+                customerRevenue,
+                bookingProfit,
+                totalProfit,
+              };
+            });
+
+            // Find max value for scaling
+            const maxProfit = Math.max(...chartData.map(d => d.totalProfit));
+            const chartHeight = 70;
+
+            return (
+              <>
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartArea}>
+                    {chartData.map((yearData, idx) => {
+                      // Calculate bar height as percentage of max
+                      const barHeightPercent = maxProfit > 0 ? (yearData.totalProfit / maxProfit) * 100 : 0;
+                      const barHeight = (barHeightPercent / 100) * chartHeight;
+
+                      // For hotel, show stacked bar (charging revenue + booking profit)
+                      const chargingBarHeight = isHotelSiteHost && yearData.bookingProfit > 0
+                        ? (yearData.customerRevenue / maxProfit) * chartHeight
+                        : barHeight;
+                      const bookingBarHeight = isHotelSiteHost && yearData.bookingProfit > 0
+                        ? (yearData.bookingProfit / maxProfit) * chartHeight
+                        : 0;
+
+                      return (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.chartColumn,
+                            { backgroundColor: idx % 2 === 0 ? '#f8f9fa' : '#ffffff' }
+                          ]}
+                        >
+                          <View style={styles.chartBarWrapper}>
+                            {/* Value label at top */}
+                            <Text style={styles.chartValueLabel}>
+                              {formatShort(yearData.totalProfit)}
+                            </Text>
+
+                            {/* Stacked bar */}
+                            <View style={[styles.chartBar, { height: barHeight }]}>
+                              {/* Booking profit portion (on top, orange) - only for hotel */}
+                              {isHotelSiteHost && bookingBarHeight > 0 && (
+                                <View
+                                  style={[
+                                    styles.chartBarRevenue,
+                                    { height: bookingBarHeight, backgroundColor: '#f59e0b' }
+                                  ]}
+                                />
+                              )}
+                              {/* Customer revenue portion - Blue if base rent, Green if rev share */}
+                              <View
+                                style={[
+                                  styles.chartBarRevenue,
+                                  {
+                                    height: chargingBarHeight,
+                                    backgroundColor: yearData.isRevShareHigher ? '#4CBC88' : '#60a5fa'
+                                  }
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Year labels */}
+                <View style={styles.chartLabels}>
+                  {chartData.map((yearData, idx) => (
+                    <Text key={idx} style={styles.chartLabel}>Y{yearData.year}</Text>
+                  ))}
+                </View>
+
+                {/* Legend */}
+                <View style={styles.chartLegend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendBox, { backgroundColor: '#60a5fa' }]} />
+                    <Text style={styles.legendText}>Base Rent (Higher)</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendBox, { backgroundColor: '#4CBC88' }]} />
+                    <Text style={styles.legendText}>Rev Share (Higher)</Text>
+                  </View>
+                  {isHotelSiteHost && (
+                    <View style={styles.legendItem}>
+                      <View style={[styles.legendBox, { backgroundColor: '#f59e0b' }]} />
+                      <Text style={styles.legendText}>Booking Profit</Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            );
+          })()}
+        </View>
+        )}
+
+        {/* Site Summary - Different display for Site Host vs Customer Owned */}
         <View style={[styles.annualBox, { padding: 6, backgroundColor: '#B9BAB8' }]}>
           <Text style={[styles.annualTitle, { marginBottom: 4, color: '#000' }]}>Estimated Site Summary</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {/* MONTHLY Box */}
-            <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
-              <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>MONTHLY TOTALS</Text>
-              {/* Top row */}
-              <View style={{ flexDirection: 'row', marginBottom: 3 }}>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Delivery</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalEvPirCost / 12)}</Text>
-                </View>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Supply</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalSupplyCharge / 12)}</Text>
-                </View>
-                <View style={{ width: '34%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Energy Cost</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalWithSupply / 12)}</Text>
-                </View>
-              </View>
-              {/* Bottom row */}
-              <View style={{ flexDirection: 'row' }}>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Charging Net</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: (results.revenue?.monthlyCustomerFinalRevenue ?? 0) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}</Text>
-                </View>
-                {isHotel && (
-                  <View style={{ width: '33%' }}>
-                    <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
-                    <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(monthlyBookingProfit)}</Text>
+            {/* Site Host Version */}
+            {isSiteHost ? (
+              <>
+                {/* YEAR 1 TOTALS Box */}
+                <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
+                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>YEAR 1 TOTALS</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: isHotel ? 'flex-start' : 'center' }}>
+                    {isHotel && (
+                      <View style={{ width: '50%' }}>
+                        <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(tenYearProjection?.[0]?.bookingProfit ?? 0)}</Text>
+                      </View>
+                    )}
+                    <View style={{ width: isHotel ? '50%' : '100%', alignItems: isHotel ? 'flex-start' : 'center' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Year 1 Site Charging Profit</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(tenYearProjection?.[0]?.totalCustomerProfit ?? tenYearProjection?.[0]?.customerRevenue ?? 0)}</Text>
+                    </View>
                   </View>
-                )}
-                <View style={{ width: isHotel ? '34%' : '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Site Total Profit</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: ((results.revenue?.monthlyCustomerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit : 0)) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency((results.revenue?.monthlyCustomerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit : 0))}</Text>
                 </View>
-              </View>
-            </View>
 
-            {/* ANNUAL Box */}
-            <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
-              <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>ANNUAL TOTALS</Text>
-              {/* Top row */}
-              <View style={{ flexDirection: 'row', marginBottom: 3 }}>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Delivery</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalEvPirCost)}</Text>
-                </View>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Supply</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalSupplyCharge)}</Text>
-                </View>
-                <View style={{ width: '34%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Energy Cost</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalWithSupply)}</Text>
-                </View>
-              </View>
-              {/* Bottom row */}
-              <View style={{ flexDirection: 'row' }}>
-                <View style={{ width: '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Charging Net</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
-                </View>
-                {isHotel && (
-                  <View style={{ width: '33%' }}>
-                    <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
-                    <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(monthlyBookingProfit * 12)}</Text>
+                {/* 10-YEAR LEASE TOTALS Box */}
+                <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
+                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>10-YEAR LEASE TOTALS</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: isHotel ? 'flex-start' : 'center' }}>
+                    {isHotel && (
+                      <View style={{ width: '50%' }}>
+                        <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(tenYearProjection?.reduce((sum, yr) => sum + (yr.bookingProfit ?? 0), 0) ?? 0)}</Text>
+                      </View>
+                    )}
+                    <View style={{ width: isHotel ? '50%' : '100%', alignItems: isHotel ? 'flex-start' : 'center' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>10-Year Site Charging Profit</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(tenYearProjection?.reduce((sum, yr) => sum + (yr.totalCustomerProfit ?? yr.customerRevenue), 0) ?? 0)}</Text>
+                    </View>
                   </View>
-                )}
-                <View style={{ width: isHotel ? '34%' : '33%' }}>
-                  <Text style={{ fontSize: 5, color: '#000' }}>Site Total Profit</Text>
-                  <Text style={{ fontSize: 8, fontWeight: 'bold', color: ((results.revenue?.customerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit * 12 : 0)) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency((results.revenue?.customerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit * 12 : 0))}</Text>
                 </View>
-              </View>
-            </View>
+              </>
+            ) : (
+              <>
+                {/* Customer Owned: MONTHLY Box */}
+                <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
+                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>MONTHLY TOTALS</Text>
+                  {/* Top row */}
+                  <View style={{ flexDirection: 'row', marginBottom: 3 }}>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Delivery</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalEvPirCost / 12)}</Text>
+                    </View>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Supply</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalSupplyCharge / 12)}</Text>
+                    </View>
+                    <View style={{ width: '34%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Energy Cost</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalWithSupply / 12)}</Text>
+                    </View>
+                  </View>
+                  {/* Bottom row */}
+                  <View style={{ flexDirection: 'row' }}>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Charging Net</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: (results.revenue?.monthlyCustomerFinalRevenue ?? 0) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency(results.revenue?.monthlyCustomerFinalRevenue ?? 0)}</Text>
+                    </View>
+                    {isHotel && (
+                      <View style={{ width: '33%' }}>
+                        <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(monthlyBookingProfit)}</Text>
+                      </View>
+                    )}
+                    <View style={{ width: isHotel ? '34%' : '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Site Total Profit</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: ((results.revenue?.monthlyCustomerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit : 0)) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency((results.revenue?.monthlyCustomerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit : 0))}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Customer Owned: ANNUAL Box */}
+                <View style={{ flex: 1, backgroundColor: '#ECECEC', borderRadius: 4, padding: 6 }}>
+                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#000', marginBottom: 3 }}>ANNUAL TOTALS</Text>
+                  {/* Top row */}
+                  <View style={{ flexDirection: 'row', marginBottom: 3 }}>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Delivery</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalEvPirCost)}</Text>
+                    </View>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Supply</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalSupplyCharge)}</Text>
+                    </View>
+                    <View style={{ width: '34%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Energy Cost</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#212529' }}>{formatCurrency(yearly.totalWithSupply)}</Text>
+                    </View>
+                  </View>
+                  {/* Bottom row */}
+                  <View style={{ flexDirection: 'row' }}>
+                    <View style={{ width: '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Charging Net</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
+                    </View>
+                    {isHotel && (
+                      <View style={{ width: '33%' }}>
+                        <Text style={{ fontSize: 5, color: '#000' }}>Booking Profit</Text>
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#166534' }}>{formatCurrency(monthlyBookingProfit * 12)}</Text>
+                      </View>
+                    )}
+                    <View style={{ width: isHotel ? '34%' : '33%' }}>
+                      <Text style={{ fontSize: 5, color: '#000' }}>Site Total Profit</Text>
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: ((results.revenue?.customerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit * 12 : 0)) >= 0 ? '#166534' : '#dc2626' }}>{formatCurrency((results.revenue?.customerFinalRevenue ?? 0) + (isHotel ? monthlyBookingProfit * 12 : 0))}</Text>
+                    </View>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </View>
 

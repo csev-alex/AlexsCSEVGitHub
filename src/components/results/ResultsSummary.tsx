@@ -13,6 +13,8 @@ interface ResultsSummaryProps {
 }
 
 export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ results }) => {
+  const isSiteHost = results.project.ownershipType === 'site-host';
+
   return (
     <div className="card">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -22,12 +24,19 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ results }) => {
             Based on your inputs and current rate structure
           </p>
         </div>
-        <div
-          className={`px-4 py-2 rounded-lg font-medium text-sm ${getTierColorClass(
-            results.tier
-          )}`}
-        >
-          {getTierLabel(results.tier)} • {formatPercent(results.loadFactorPercent)} Load Factor
+        <div className="flex items-center gap-2">
+          {isSiteHost && (
+            <div className="px-3 py-2 rounded-lg font-bold text-sm bg-neutral-200 text-neutral-700 border border-neutral-400">
+              CSEV PAYS ELECTRIC
+            </div>
+          )}
+          <div
+            className={`px-4 py-2 rounded-lg font-medium text-sm ${getTierColorClass(
+              results.tier
+            )}`}
+          >
+            {getTierLabel(results.tier)} • {formatPercent(results.loadFactorPercent)} Load Factor
+          </div>
         </div>
       </div>
 

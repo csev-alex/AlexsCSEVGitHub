@@ -1,3 +1,23 @@
+// Ownership type
+export type OwnershipType = 'customer-owned' | 'site-host';
+
+// Site Host settings
+export interface SiteHostSettings {
+  leasePerSpace: number;           // Default $200/space/month
+  additionalEquipmentSpaces: number; // Default 0
+  revenueSharePercent: number;     // Default 10%
+}
+
+// Utilization growth mode
+export type UtilizationGrowthMode = 'constant' | 'manual';
+
+// Utilization growth settings for 10-year projection
+export interface UtilizationGrowthSettings {
+  mode: UtilizationGrowthMode;
+  constantRate: number;            // Default 3% - used when mode is 'constant'
+  yearlyRates: number[];           // 9 values for Y1→Y2, Y2→Y3, etc. - used when mode is 'manual'
+}
+
 // Service class types
 export type ServiceClass =
   | 'SC-2D'
@@ -94,8 +114,14 @@ export interface RevenueSettings {
   industryType?: IndustryType; // Customer's industry type
   // Hotel/Hospitality specific fields
   additionalMonthlyBookings?: number; // Number of additional monthly bookings (default 20)
-  bookingProfit?: number; // Profit per booking in dollars (default $100)
-  bookingMargin?: number; // Booking margin percentage (default 75%)
+  bookingProfitPerBooking?: number; // Profit per booking in dollars (default $100)
+  // Hotel YOY growth settings
+  bookingGrowthMode?: 'constant' | 'manual';
+  bookingGrowthRate?: number; // Additional bookings per year (default 1)
+  bookingGrowthYearlyRates?: number[]; // 9 values for Y1→Y2 through Y9→Y10
+  profitGrowthMode?: 'constant' | 'manual';
+  profitGrowthRate?: number; // Profit increase % per year (default 3%)
+  profitGrowthYearlyRates?: number[]; // 9 values for Y1→Y2 through Y9→Y10
 }
 
 // Full project state
@@ -111,6 +137,11 @@ export interface Project {
   utility: 'national-grid' | string;
   serviceClass: ServiceClass;
   meteringType: MeteringType;
+
+  // Ownership model
+  ownershipType: OwnershipType;
+  siteHostSettings?: SiteHostSettings;
+  utilizationGrowth?: UtilizationGrowthSettings;
 
   // EVSE Installed
   chargers: ChargerEntry[];
@@ -240,6 +271,38 @@ export interface RevenueCalculation {
   monthlyCustomerFinalRevenue: number;
 }
 
+// Site Host revenue calculation
+export interface SiteHostCalculation {
+  totalSpaces: number;             // # of Ports + Add'l Equipment Spaces
+  leasePerSpace: number;           // $/space/month
+  monthlyBaseRent: number;         // totalSpaces × leasePerSpace
+  annualBaseRent: number;          // monthlyBaseRent × 12
+  revenueSharePercent: number;     // Default 10%
+  grossChargingRevenue: number;    // kWh × cost to driver
+  processingFees: number;          // grossRevenue × networkFeePercent
+  netChargingRevenue: number;      // grossRevenue - processingFees
+  revenueShareAmount: number;      // netChargingRevenue × revenueSharePercent
+  customerAnnualRevenue: number;   // MAX(annualBaseRent, revenueShareAmount)
+  revenueSource: 'base-rent' | 'revenue-share';
+}
+
+// 10-year projection data point
+export interface YearlyProjection {
+  year: number;                    // 1-10
+  utilizationMultiplier: number;   // 1.0 for Year 1, grows by YOY %
+  annualKwh: number;
+  grossChargingRevenue: number;
+  revenueShareAmount: number;
+  baseRent: number;
+  customerRevenue: number;         // MAX(baseRent, revenueShareAmount)
+  revenueSource: 'base-rent' | 'revenue-share';
+  // Hotel/Hospitality only - with YOY growth
+  monthlyBookings?: number;        // Bookings per month for this year
+  profitPerBooking?: number;       // Profit per booking for this year
+  bookingProfit?: number;          // monthlyBookings × profitPerBooking × 12
+  totalCustomerProfit?: number;    // customerRevenue + bookingProfit
+}
+
 // Full calculation result
 export interface CalculationResult {
   project: Project;
@@ -267,6 +330,9 @@ export interface CalculationResult {
     supplyRate: number;
   };
   revenue?: RevenueCalculation;
+  // Site host specific
+  siteHostCalculation?: SiteHostCalculation;
+  tenYearProjection?: YearlyProjection[];
 }
 
 // Default values for new project
@@ -298,8 +364,28 @@ export const DEFAULT_REVENUE_SETTINGS: RevenueSettings = {
   industryType: 'Other', // Default industry
   // Hotel/Hospitality defaults
   additionalMonthlyBookings: 20,
-  bookingProfit: 100,
-  bookingMargin: 75,
+  bookingProfitPerBooking: 100, // $100 per booking
+  // Hotel YOY growth defaults
+  bookingGrowthMode: 'constant',
+  bookingGrowthRate: 1, // 1 additional booking per year
+  bookingGrowthYearlyRates: [1, 1, 1, 1, 1, 1, 1, 1, 1], // 9 years
+  profitGrowthMode: 'constant',
+  profitGrowthRate: 3, // 3% profit increase per year
+  profitGrowthYearlyRates: [3, 3, 3, 3, 3, 3, 3, 3, 3], // 9 years
+};
+
+// Default site host settings
+export const DEFAULT_SITE_HOST_SETTINGS: SiteHostSettings = {
+  leasePerSpace: 200,              // $200/space/month
+  additionalEquipmentSpaces: 0,
+  revenueSharePercent: 10,         // 10%
+};
+
+// Default utilization growth settings
+export const DEFAULT_UTILIZATION_GROWTH: UtilizationGrowthSettings = {
+  mode: 'constant',
+  constantRate: 10,                // 10% annual increase
+  yearlyRates: [10, 10, 10, 10, 10, 10, 10, 10, 10], // 9 years (Y1→Y2 through Y9→Y10)
 };
 
 // Default cost to driver by charger level
@@ -315,6 +401,7 @@ export const DEFAULT_PROJECT: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = 
   utility: 'national-grid',
   serviceClass: 'SC-2D',
   meteringType: 'separate',
+  ownershipType: 'customer-owned',
   chargers: [],
   billingInputs: DEFAULT_BILLING_INPUTS,
   supplyRatePerKwh: 0.10,

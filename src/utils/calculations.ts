@@ -7,7 +7,11 @@ import {
   YearlySummary,
   TierRates,
   RevenueCalculation,
+  SiteHostCalculation,
+  YearlyProjection,
   DEFAULT_REVENUE_SETTINGS,
+  DEFAULT_SITE_HOST_SETTINGS,
+  DEFAULT_UTILIZATION_GROWTH,
 } from '../types';
 import { getRateTable } from '../data/rates/nationalGrid';
 import {
@@ -93,7 +97,8 @@ export function calculateEstimatedMonthlyKwh(
 
 /**
  * Calculate estimated annual kWh
- * Annual kWh = Total Daily Charging Hours × Avg kW per Port × 365
+ * Annual kWh = Total Daily Charging Hours × Avg kW per Port × 360
+ * Uses 360 days (30 days × 12 months) for consistency with seasonal calculations
  */
 export function calculateEstimatedAnnualKwh(
   chargers: ChargerEntry[],
@@ -103,7 +108,7 @@ export function calculateEstimatedAnnualKwh(
   if (avgKwPerPort === 0) return 0;
 
   const dailyKwh = totalDailyChargingHours * avgKwPerPort;
-  return dailyKwh * 365; // Annual estimate
+  return dailyKwh * 360; // Annual estimate (30 days × 12 months)
 }
 
 /**
@@ -583,6 +588,31 @@ export function calculateResults(project: Project): CalculationResult | null {
     revenueSettings.customerRevSharePercent ?? DEFAULT_REVENUE_SETTINGS.customerRevSharePercent
   );
 
+  // Calculate site host revenue if ownership type is site-host
+  let siteHostCalculation: SiteHostCalculation | undefined;
+  let tenYearProjection: YearlyProjection[] | undefined;
+
+  if (project.ownershipType === 'site-host') {
+    const siteHostSettings = project.siteHostSettings || DEFAULT_SITE_HOST_SETTINGS;
+    const grossChargingRevenue = estimatedAnnualKwh * revenueSettings.costToDriverPerKwh;
+
+    siteHostCalculation = calculateSiteHostRevenue(
+      totalPorts,
+      siteHostSettings.additionalEquipmentSpaces,
+      siteHostSettings.leasePerSpace,
+      siteHostSettings.revenueSharePercent,
+      grossChargingRevenue,
+      revenueSettings.networkFeePercent ?? DEFAULT_REVENUE_SETTINGS.networkFeePercent
+    );
+
+    tenYearProjection = calculateTenYearProjection(
+      project,
+      estimatedAnnualKwh,
+      revenueSettings.costToDriverPerKwh,
+      revenueSettings.networkFeePercent ?? DEFAULT_REVENUE_SETTINGS.networkFeePercent
+    );
+  }
+
   return {
     project,
     tier,
@@ -609,5 +639,139 @@ export function calculateResults(project: Project): CalculationResult | null {
       supplyRate,
     },
     revenue,
+    siteHostCalculation,
+    tenYearProjection,
   };
+}
+
+/**
+ * Calculate Site Host revenue
+ * Customer receives the greater of base rent or revenue share
+ */
+export function calculateSiteHostRevenue(
+  totalPorts: number,
+  additionalEquipmentSpaces: number,
+  leasePerSpace: number,
+  revenueSharePercent: number,
+  grossChargingRevenue: number,
+  networkFeePercent: number
+): SiteHostCalculation {
+  const totalSpaces = totalPorts + additionalEquipmentSpaces;
+  const monthlyBaseRent = totalSpaces * leasePerSpace;
+  const annualBaseRent = monthlyBaseRent * 12;
+
+  // Calculate revenue share
+  const processingFees = grossChargingRevenue * (networkFeePercent / 100);
+  const netChargingRevenue = grossChargingRevenue - processingFees;
+  const revenueShareAmount = netChargingRevenue * (revenueSharePercent / 100);
+
+  // Customer gets the greater of base rent or revenue share
+  const customerAnnualRevenue = Math.max(annualBaseRent, revenueShareAmount);
+  const revenueSource: 'base-rent' | 'revenue-share' =
+    annualBaseRent >= revenueShareAmount ? 'base-rent' : 'revenue-share';
+
+  return {
+    totalSpaces,
+    leasePerSpace,
+    monthlyBaseRent,
+    annualBaseRent,
+    revenueSharePercent,
+    grossChargingRevenue,
+    processingFees,
+    netChargingRevenue,
+    revenueShareAmount,
+    customerAnnualRevenue,
+    revenueSource,
+  };
+}
+
+/**
+ * Calculate 10-year projection for Site Host
+ */
+export function calculateTenYearProjection(
+  project: Project,
+  baseAnnualKwh: number,
+  costToDriverPerKwh: number,
+  networkFeePercent: number
+): YearlyProjection[] {
+  const siteHostSettings = project.siteHostSettings || DEFAULT_SITE_HOST_SETTINGS;
+  const utilizationGrowth = project.utilizationGrowth || DEFAULT_UTILIZATION_GROWTH;
+  const revenueSettings = project.revenueSettings || DEFAULT_REVENUE_SETTINGS;
+
+  const totalPorts = calculateTotalPorts(project.chargers);
+  const totalSpaces = totalPorts + siteHostSettings.additionalEquipmentSpaces;
+  const annualBaseRent = totalSpaces * siteHostSettings.leasePerSpace * 12;
+
+  // Get utilization growth rates
+  const growthRates =
+    utilizationGrowth.mode === 'constant'
+      ? Array(9).fill(utilizationGrowth.constantRate)
+      : utilizationGrowth.yearlyRates;
+
+  // Get booking growth rates (additional bookings per year)
+  const bookingGrowthRates =
+    revenueSettings.bookingGrowthMode === 'manual'
+      ? (revenueSettings.bookingGrowthYearlyRates ?? Array(9).fill(1))
+      : Array(9).fill(revenueSettings.bookingGrowthRate ?? 1);
+
+  // Get profit growth rates (% increase per year)
+  const profitGrowthRates =
+    revenueSettings.profitGrowthMode === 'manual'
+      ? (revenueSettings.profitGrowthYearlyRates ?? Array(9).fill(3))
+      : Array(9).fill(revenueSettings.profitGrowthRate ?? 3);
+
+  const projections: YearlyProjection[] = [];
+  let cumulativeMultiplier = 1.0;
+  let currentMonthlyBookings = revenueSettings.additionalMonthlyBookings ?? 20;
+  let currentProfitPerBooking = revenueSettings.bookingProfitPerBooking ?? 100;
+
+  for (let year = 1; year <= 10; year++) {
+    // Apply growth for years 2-10
+    if (year > 1 && year <= 10) {
+      const growthRate = growthRates[year - 2] || 10;
+      cumulativeMultiplier *= 1 + growthRate / 100;
+
+      // Apply booking growth (additive - additional bookings per year)
+      const bookingGrowth = bookingGrowthRates[year - 2] ?? 1;
+      currentMonthlyBookings += bookingGrowth;
+
+      // Apply profit growth (multiplicative - % increase)
+      const profitGrowth = profitGrowthRates[year - 2] ?? 3;
+      currentProfitPerBooking *= 1 + profitGrowth / 100;
+    }
+
+    const annualKwh = baseAnnualKwh * cumulativeMultiplier;
+    const grossChargingRevenue = annualKwh * costToDriverPerKwh;
+    const processingFees = grossChargingRevenue * (networkFeePercent / 100);
+    const netChargingRevenue = grossChargingRevenue - processingFees;
+    const revenueShareAmount =
+      netChargingRevenue * (siteHostSettings.revenueSharePercent / 100);
+
+    const customerRevenue = Math.max(annualBaseRent, revenueShareAmount);
+    const revenueSource: 'base-rent' | 'revenue-share' =
+      annualBaseRent >= revenueShareAmount ? 'base-rent' : 'revenue-share';
+
+    const projection: YearlyProjection = {
+      year,
+      utilizationMultiplier: cumulativeMultiplier,
+      annualKwh,
+      grossChargingRevenue,
+      revenueShareAmount,
+      baseRent: annualBaseRent,
+      customerRevenue,
+      revenueSource,
+    };
+
+    // Add booking profit for Hotel/Hospitality with YOY growth
+    if (revenueSettings.industryType === 'Hotel/Hospitality') {
+      projection.monthlyBookings = currentMonthlyBookings;
+      projection.profitPerBooking = currentProfitPerBooking;
+      projection.bookingProfit = currentMonthlyBookings * currentProfitPerBooking * 12;
+      projection.totalCustomerProfit = customerRevenue + projection.bookingProfit;
+    }
+
+    projections.push(projection);
+  }
+
+  return projections;
 }

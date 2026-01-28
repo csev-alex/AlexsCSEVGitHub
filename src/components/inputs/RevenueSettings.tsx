@@ -20,6 +20,9 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
   project,
   onUpdate,
 }) => {
+  // Check if this is a Site Host project
+  const isSiteHost = project.ownershipType === 'site-host';
+
   // Calculate suggested cost to driver based on charger mix
   const suggestedCostToDriver = useMemo(() => {
     if (project.chargers.length === 0) {
@@ -124,16 +127,80 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
     onUpdate({
       revenueSettings: {
         ...currentSettings,
-        bookingProfit: Math.max(0, value),
+        bookingProfitPerBooking: Math.max(0, value),
       },
     });
   };
 
-  const handleBookingMarginChange = (value: number) => {
+  // Hotel YOY growth handlers
+  const handleBookingGrowthRateChange = (value: number) => {
     onUpdate({
       revenueSettings: {
         ...currentSettings,
-        bookingMargin: Math.min(100, Math.max(0, value)),
+        bookingGrowthRate: value,
+        bookingGrowthYearlyRates: currentSettings.bookingGrowthMode === 'constant'
+          ? Array(9).fill(value)
+          : currentSettings.bookingGrowthYearlyRates,
+      },
+    });
+  };
+
+  const handleBookingGrowthModeToggle = () => {
+    const isManual = currentSettings.bookingGrowthMode === 'manual';
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        bookingGrowthMode: isManual ? 'constant' : 'manual',
+        bookingGrowthYearlyRates: isManual
+          ? currentSettings.bookingGrowthYearlyRates
+          : Array(9).fill(currentSettings.bookingGrowthRate ?? 1),
+      },
+    });
+  };
+
+  const handleBookingGrowthYearlyChange = (yearIndex: number, value: number) => {
+    const newRates = [...(currentSettings.bookingGrowthYearlyRates ?? Array(9).fill(1))];
+    newRates[yearIndex] = value;
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        bookingGrowthYearlyRates: newRates,
+      },
+    });
+  };
+
+  const handleProfitGrowthRateChange = (value: number) => {
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        profitGrowthRate: value,
+        profitGrowthYearlyRates: currentSettings.profitGrowthMode === 'constant'
+          ? Array(9).fill(value)
+          : currentSettings.profitGrowthYearlyRates,
+      },
+    });
+  };
+
+  const handleProfitGrowthModeToggle = () => {
+    const isManual = currentSettings.profitGrowthMode === 'manual';
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        profitGrowthMode: isManual ? 'constant' : 'manual',
+        profitGrowthYearlyRates: isManual
+          ? currentSettings.profitGrowthYearlyRates
+          : Array(9).fill(currentSettings.profitGrowthRate ?? 3),
+      },
+    });
+  };
+
+  const handleProfitGrowthYearlyChange = (yearIndex: number, value: number) => {
+    const newRates = [...(currentSettings.profitGrowthYearlyRates ?? Array(9).fill(3))];
+    newRates[yearIndex] = value;
+    onUpdate({
+      revenueSettings: {
+        ...currentSettings,
+        profitGrowthYearlyRates: newRates,
       },
     });
   };
@@ -287,116 +354,203 @@ export const RevenueSettings: React.FC<RevenueSettingsProps> = ({
               </p>
             </div>
 
-            {/* Booking Profit */}
+            {/* Booking Profit per Booking */}
             <div>
-              <label className="label text-amber-700">Booking Profit</label>
+              <label className="label text-amber-700">Booking Profit (per booking)</label>
               <div className="flex items-center gap-2">
                 <span className="text-neutral-500">$</span>
                 <input
                   type="number"
                   className="input-field w-28"
-                  value={currentSettings.bookingProfit ?? 100}
+                  value={currentSettings.bookingProfitPerBooking ?? 100}
                   onChange={(e) => handleBookingProfitChange(parseFloat(e.target.value) || 0)}
                   step="10"
                   min="0"
                 />
               </div>
               <p className="text-xs text-amber-600 mt-1">
-                Average profit per additional booking
+                Profit per additional booking from EV amenity
               </p>
             </div>
 
-            {/* Booking Margin */}
+            {/* YOY Growth Settings - Only for Site Host */}
+            {isSiteHost && (
+              <div className="pt-3 border-t border-amber-200 space-y-3">
+                <h4 className="text-sm font-semibold text-amber-800">YOY Booking Growth (10-Year Projection)</h4>
+
+                {/* YOY Room Booking Increase */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="label text-amber-700 mb-0">YOY Room Booking Increase</label>
+                    <button
+                      type="button"
+                      onClick={handleBookingGrowthModeToggle}
+                      className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                        currentSettings.bookingGrowthMode === 'manual'
+                          ? 'bg-amber-200 text-amber-800'
+                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {currentSettings.bookingGrowthMode === 'manual' ? 'Use Constant' : 'Manually Edit'}
+                    </button>
+                  </div>
+                  {currentSettings.bookingGrowthMode !== 'manual' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className="input-field w-20"
+                        value={currentSettings.bookingGrowthRate ?? 1}
+                        onChange={(e) => handleBookingGrowthRateChange(parseInt(e.target.value) || 0)}
+                        min="0"
+                      />
+                      <span className="text-xs text-amber-600">bookings/year increase</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2 bg-white p-2 rounded border border-amber-100">
+                      {(currentSettings.bookingGrowthYearlyRates ?? Array(9).fill(1)).map((rate, index) => (
+                        <div key={index}>
+                          <label className="text-xs text-neutral-500 block mb-1">Y{index + 1}→Y{index + 2}</label>
+                          <input
+                            type="number"
+                            className="input-field text-sm py-1 px-2 w-full"
+                            value={rate}
+                            onChange={(e) => handleBookingGrowthYearlyChange(index, parseInt(e.target.value) || 0)}
+                            min="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* YOY Booking Profit Increase */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="label text-amber-700 mb-0">YOY Booking Profit Increase</label>
+                    <button
+                      type="button"
+                      onClick={handleProfitGrowthModeToggle}
+                      className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                        currentSettings.profitGrowthMode === 'manual'
+                          ? 'bg-amber-200 text-amber-800'
+                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {currentSettings.profitGrowthMode === 'manual' ? 'Use Constant' : 'Manually Edit'}
+                    </button>
+                  </div>
+                  {currentSettings.profitGrowthMode !== 'manual' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className="input-field w-20"
+                        value={currentSettings.profitGrowthRate ?? 3}
+                        onChange={(e) => handleProfitGrowthRateChange(parseFloat(e.target.value) || 0)}
+                        step="0.5"
+                        min="0"
+                      />
+                      <span className="text-xs text-amber-600">% per year</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2 bg-white p-2 rounded border border-amber-100">
+                      {(currentSettings.profitGrowthYearlyRates ?? Array(9).fill(3)).map((rate, index) => (
+                        <div key={index}>
+                          <label className="text-xs text-neutral-500 block mb-1">Y{index + 1}→Y{index + 2}</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              className="input-field text-sm py-1 px-2 w-full"
+                              value={rate}
+                              onChange={(e) => handleProfitGrowthYearlyChange(index, parseFloat(e.target.value) || 0)}
+                              step="0.5"
+                              min="0"
+                            />
+                            <span className="text-xs text-neutral-400">%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Revenue Share Settings - only show for Customer Owned (not Site Host) */}
+        {!isSiteHost && (
+          <>
+            {/* Divider */}
+            <div className="border-t border-neutral-200 pt-4">
+              <h3 className="text-sm font-semibold text-neutral-700 mb-3">Revenue Share Settings</h3>
+            </div>
+
+            {/* Processing Fees */}
             <div>
-              <label className="label text-amber-700">Booking Margin</label>
-              <div className="flex items-center gap-2">
+              <label className="label">Processing Fees</label>
+              <div className="flex items-center gap-3">
                 <input
                   type="number"
-                  className="input-field w-20"
-                  value={currentSettings.bookingMargin ?? 75}
-                  onChange={(e) => handleBookingMarginChange(parseFloat(e.target.value) || 0)}
-                  step="5"
+                  className="input-field w-24"
+                  value={currentSettings.networkFeePercent}
+                  onChange={(e) =>
+                    handleNetworkFeeChange(parseFloat(e.target.value) || 0)
+                  }
+                  step="0.5"
                   min="0"
                   max="100"
                 />
                 <span className="text-neutral-600">%</span>
               </div>
-              <p className="text-xs text-amber-600 mt-1">
-                Percentage of booking profit attributed to EV amenity
+              <p className="text-sm text-neutral-500 mt-1">
+                Processing fees deducted from gross revenue (default: 9%)
               </p>
             </div>
-          </div>
-        )}
 
-        {/* Divider */}
-        <div className="border-t border-neutral-200 pt-4">
-          <h3 className="text-sm font-semibold text-neutral-700 mb-3">Revenue Share Settings</h3>
-        </div>
-
-        {/* Processing Fees */}
-        <div>
-          <label className="label">Processing Fees</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              className="input-field w-24"
-              value={currentSettings.networkFeePercent}
-              onChange={(e) =>
-                handleNetworkFeeChange(parseFloat(e.target.value) || 0)
-              }
-              step="0.5"
-              min="0"
-              max="100"
-            />
-            <span className="text-neutral-600">%</span>
-          </div>
-          <p className="text-sm text-neutral-500 mt-1">
-            Processing fees deducted from gross revenue (default: 9%)
-          </p>
-        </div>
-
-        {/* Customer Revenue Share */}
-        <div>
-          <label className="label">Customer Rev Share</label>
-          <div className="flex items-center gap-4">
-            <input
-              type="range"
-              className="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              value={currentSettings.customerRevSharePercent}
-              onChange={(e) => handleCustomerRevShareChange(parseInt(e.target.value))}
-              min="0"
-              max="100"
-              step="5"
-            />
-            <div className="flex items-center gap-1 w-20">
-              <input
-                type="number"
-                className="input-field w-16 text-center py-1"
-                value={currentSettings.customerRevSharePercent}
-                onChange={(e) =>
-                  handleCustomerRevShareChange(parseInt(e.target.value) || 0)
-                }
-                min="0"
-                max="100"
-              />
-              <span className="text-neutral-600">%</span>
+            {/* Customer Revenue Share */}
+            <div>
+              <label className="label">Customer Rev Share</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  className="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                  value={currentSettings.customerRevSharePercent}
+                  onChange={(e) => handleCustomerRevShareChange(parseInt(e.target.value))}
+                  min="0"
+                  max="100"
+                  step="5"
+                />
+                <div className="flex items-center gap-1 w-20">
+                  <input
+                    type="number"
+                    className="input-field w-16 text-center py-1"
+                    value={currentSettings.customerRevSharePercent}
+                    onChange={(e) =>
+                      handleCustomerRevShareChange(parseInt(e.target.value) || 0)
+                    }
+                    min="0"
+                    max="100"
+                  />
+                  <span className="text-neutral-600">%</span>
+                </div>
+              </div>
+              <p className="text-sm text-neutral-500 mt-1">
+                Customer's share of net revenue after network fee
+              </p>
             </div>
-          </div>
-          <p className="text-sm text-neutral-500 mt-1">
-            Customer's share of net revenue after network fee
-          </p>
-        </div>
 
-        {/* CSEV Revenue Share (Read-only display) */}
-        <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-700">CSEV Rev Share</span>
-            <span className="text-lg font-bold text-primary-600">{csevRevSharePercent}%</span>
-          </div>
-          <p className="text-xs text-neutral-500 mt-1">
-            CSEV's share of net revenue (100% - Customer Rev Share)
-          </p>
-        </div>
+            {/* CSEV Revenue Share (Read-only display) */}
+            <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700">CSEV Rev Share</span>
+                <span className="text-lg font-bold text-primary-600">{csevRevSharePercent}%</span>
+              </div>
+              <p className="text-xs text-neutral-500 mt-1">
+                CSEV's share of net revenue (100% - Customer Rev Share)
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

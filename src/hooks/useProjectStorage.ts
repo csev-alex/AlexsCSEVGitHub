@@ -16,14 +16,43 @@ const SERVICE_CLASS_MIGRATION: Record<string, ServiceClass> = {
 };
 
 /**
- * Migrate a project to use new service class names
+ * Migrate a project to use new service class names and add new fields
  */
 function migrateProject(project: Project): Project {
+  let migrated = { ...project };
+
+  // Migrate old service class names
   const newServiceClass = SERVICE_CLASS_MIGRATION[project.serviceClass];
   if (newServiceClass) {
-    return { ...project, serviceClass: newServiceClass };
+    migrated.serviceClass = newServiceClass;
   }
-  return project;
+
+  // Add ownershipType if missing (default to customer-owned)
+  if (!migrated.ownershipType) {
+    migrated.ownershipType = 'customer-owned';
+  }
+
+  // Migrate bookingProfit to bookingProfitPerBooking and remove bookingMargin
+  if (migrated.revenueSettings) {
+    // Use type assertion to check for legacy fields
+    const settings = migrated.revenueSettings as unknown as Record<string, unknown>;
+    if ('bookingProfit' in settings && !('bookingProfitPerBooking' in settings)) {
+      migrated.revenueSettings = {
+        ...migrated.revenueSettings,
+        bookingProfitPerBooking: settings.bookingProfit as number,
+      };
+    }
+    // Remove deprecated bookingMargin field by creating clean object
+    if ('bookingMargin' in settings || 'bookingProfit' in settings) {
+      const { bookingMargin, bookingProfit, ...cleanSettings } = settings;
+      migrated.revenueSettings = {
+        ...migrated.revenueSettings,
+        ...cleanSettings,
+      } as typeof migrated.revenueSettings;
+    }
+  }
+
+  return migrated;
 }
 
 /**

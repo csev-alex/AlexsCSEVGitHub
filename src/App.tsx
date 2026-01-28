@@ -6,6 +6,7 @@ import { UtilitySelector } from './components/inputs/UtilitySelector';
 import { ServiceClassSelector } from './components/inputs/ServiceClassSelector';
 import { MeteringSelector } from './components/inputs/MeteringSelector';
 import { EVSEInstalled } from './components/inputs/EVSEInstalled';
+import { OwnershipSettings } from './components/inputs/OwnershipSettings';
 import { BillingPeriodInputs } from './components/inputs/BillingPeriodInputs';
 import { RevenueSettings } from './components/inputs/RevenueSettings';
 import { ResultsSummary } from './components/results/ResultsSummary';
@@ -139,6 +140,11 @@ function App() {
             </div>
 
             <EVSEInstalled
+              project={currentProject}
+              onUpdate={handleUpdateProject}
+            />
+
+            <OwnershipSettings
               project={currentProject}
               onUpdate={handleUpdateProject}
             />
