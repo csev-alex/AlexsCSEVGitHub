@@ -75,6 +75,29 @@ export interface BillingInputs {
   timePerSessionMinutes: number; // Legacy - kept for backwards compatibility
 }
 
+// Industry type options
+export type IndustryType =
+  | 'Hotel/Hospitality'
+  | 'Multi-Unit Dwelling'
+  | 'Restaurant'
+  | 'Workplace'
+  | 'Dealership'
+  | 'Municipality'
+  | 'Other';
+
+// Revenue settings for charging EV drivers
+export interface RevenueSettings {
+  costToDriverPerKwh: number; // $/kWh charged to drivers
+  percentTimeChargingDrivers: number; // 0-100, percentage of usage that is paid charging
+  networkFeePercent: number; // 0-100, processing fee percentage (default 9%)
+  customerRevSharePercent: number; // 0-100, customer's share of net revenue after processing fee (default 100%)
+  industryType?: IndustryType; // Customer's industry type
+  // Hotel/Hospitality specific fields
+  additionalMonthlyBookings?: number; // Number of additional monthly bookings (default 20)
+  bookingProfit?: number; // Profit per booking in dollars (default $100)
+  bookingMargin?: number; // Booking margin percentage (default 75%)
+}
+
 // Full project state
 export interface Project {
   id: string;
@@ -98,6 +121,9 @@ export interface Project {
 
   // Optional supply rate
   supplyRatePerKwh?: number;
+
+  // Revenue settings for charging EV drivers
+  revenueSettings?: RevenueSettings;
 }
 
 // Rate tier structure
@@ -191,6 +217,29 @@ export interface YearlySummary {
   loadFactor: number;
 }
 
+// Revenue calculation results
+export interface RevenueCalculation {
+  costToDriverPerKwh: number;
+  percentTimeChargingDrivers: number;
+  billableKwh: number; // Total kWh × percent charging drivers
+  grossRevenue: number; // Billable kWh × cost to driver
+  // Network fee
+  networkFeePercent: number;
+  networkFeeAmount: number; // Gross revenue × network fee %
+  revenueAfterNetworkFee: number; // Gross revenue - network fee
+  // Revenue share split
+  customerRevSharePercent: number;
+  csevRevSharePercent: number; // 100 - customer rev share %
+  customerNetChargingRevenue: number; // Revenue after network fee × customer share %
+  csevNetChargingRevenue: number; // Revenue after network fee × CSEV share %
+  // Final customer revenue
+  totalEnergyCost: number; // EV PIR delivery + supply costs
+  customerFinalRevenue: number; // Customer net charging revenue - energy costs
+  // Monthly breakdowns
+  monthlyGrossRevenue: number;
+  monthlyCustomerFinalRevenue: number;
+}
+
 // Full calculation result
 export interface CalculationResult {
   project: Project;
@@ -217,6 +266,7 @@ export interface CalculationResult {
     standardDemandRate: number;
     supplyRate: number;
   };
+  revenue?: RevenueCalculation;
 }
 
 // Default values for new project
@@ -239,6 +289,25 @@ export const DEFAULT_BILLING_INPUTS: BillingInputs = {
   timePerSessionMinutes: 60, // Legacy
 };
 
+// Default revenue settings
+export const DEFAULT_REVENUE_SETTINGS: RevenueSettings = {
+  costToDriverPerKwh: 0.40, // Default for Level 2, will be recalculated based on charger mix
+  percentTimeChargingDrivers: 100,
+  networkFeePercent: 9.00, // Default 9% processing fee
+  customerRevSharePercent: 100, // Default 100% to customer
+  industryType: 'Other', // Default industry
+  // Hotel/Hospitality defaults
+  additionalMonthlyBookings: 20,
+  bookingProfit: 100,
+  bookingMargin: 75,
+};
+
+// Default cost to driver by charger level
+export const DEFAULT_COST_TO_DRIVER = {
+  'Level 2': 0.40,
+  'DCFC (Level 3)': 0.55,
+};
+
 export const DEFAULT_PROJECT: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = {
   name: 'New Project',
   customerName: '',
@@ -249,4 +318,5 @@ export const DEFAULT_PROJECT: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = 
   chargers: [],
   billingInputs: DEFAULT_BILLING_INPUTS,
   supplyRatePerKwh: 0.10,
+  revenueSettings: DEFAULT_REVENUE_SETTINGS,
 };

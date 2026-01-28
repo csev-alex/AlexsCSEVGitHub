@@ -253,13 +253,13 @@ export const evseEquipment: EVSEEquipment[] = [
     id: 'dcfc-320kw-ccs-nacs',
     level: 'DCFC (Level 3)',
     name: 'CSEV DCHP 320kW - CCS/NACS - POS & CMS & Boost Cables',
-    description: 'CSEV DCHP 320kW - CCS/NACS - POS & CMS & Boost Cables. Includes 2 Years of Parts Only Warranty',
+    description: 'CSEV DCHP 320kW - CCS/NACS - POS & CMS & Boost Cables (Bundle of 2x 320kW chargers). Includes 2 Years of Parts Only Warranty',
     manufacturer: 'Autel',
     numberOfPlugs: 4,
     amperage: null,
     kw208V: null,
     kw240V: null,
-    kw480V: 320,
+    kw480V: 640,
   },
 ];
 
