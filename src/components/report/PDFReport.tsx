@@ -427,7 +427,7 @@ interface PDFReportProps {
 export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
   const { project, yearly, ratesUsed, monthly } = results;
 
-  // Monthly profit (customer final revenue after all deductions including energy costs)
+  // Monthly customer profit for chart
   const monthlyProfit = results.revenue?.monthlyCustomerFinalRevenue ?? 0;
 
   // Calculate max cost for chart scaling - January to December order
@@ -446,18 +446,8 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
     { label: 'Dec', delivery: monthly.winter.totalEvPirCost, supply: monthly.winter.supplyCharge, isSummer: false, profit: monthlyProfit },
   ];
 
-  // Calculate running cumulative net revenue for the line plot
-  let runningNetRevenue = 0;
-  const monthlyDataWithCumulative = monthlyData.map((month) => {
-    runningNetRevenue += month.profit;
-    return { ...month, cumulativeNetRevenue: runningNetRevenue };
-  });
-
   // For bar scaling, use max of costs or profit (use absolute value for negative profits)
   const maxBarValue = Math.max(...monthlyData.map(d => Math.max(d.delivery + d.supply, Math.abs(d.profit))));
-  // For line scaling, use the range of cumulative values
-  const maxCumulativeRevenue = Math.max(...monthlyDataWithCumulative.map(d => d.cumulativeNetRevenue));
-  const minCumulativeRevenue = Math.min(...monthlyDataWithCumulative.map(d => d.cumulativeNetRevenue));
 
   return (
     <Document>
@@ -706,14 +696,14 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
               <View style={styles.revenueHeader}>
                 <Text style={[styles.seasonTitle, { color: '#fff' }]}>Charging Revenue</Text>
                 <Text style={[styles.seasonSubtitle, { color: '#a7f3d0' }]}>
-                  ${results.revenue?.costToDriverPerKwh.toFixed(2)}/kWh • {results.revenue?.percentTimeChargingDrivers}% paid
+                  ${results.revenue?.costToDriverPerKwh.toFixed(2)}/kWh   Charged {results.revenue?.percentTimeChargingDrivers}% of Time
                 </Text>
               </View>
               <View style={styles.revenueBody}>
                 <Text style={styles.sectionLabel}>REVENUE</Text>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Annual Billable kWh</Text>
-                  <Text style={styles.rowValue}>{formatKwh(results.yearly.totalKwh * (results.revenue?.percentTimeChargingDrivers ?? 100) / 100)}</Text>
+                  <Text style={styles.rowValue}>{formatKwh(results.estimatedAnnualKwh)}</Text>
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Annual Gross Rev</Text>
@@ -722,14 +712,14 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
 
                 <Text style={styles.sectionLabel}>DEDUCTIONS</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Network Fee ({results.revenue?.networkFeePercent}%)</Text>
+                  <Text style={styles.rowLabel}>Network Fee</Text>
                   <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.networkFeeAmount ?? 0)}</Text>
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Cust Share ({results.revenue?.customerRevSharePercent}%)</Text>
+                  <Text style={styles.rowLabel}>Cust Rev Share ({results.revenue?.customerRevSharePercent}%)</Text>
                   <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
                 </View>
-                {/* Spacer row to align COSTS with DELIVERY in Winter */}
+                {/* Blank row to align with Winter TOU section */}
                 <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
                   <Text style={styles.rowLabel}> </Text>
                   <Text style={styles.rowValue}> </Text>
@@ -737,18 +727,27 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
 
                 <Text style={styles.sectionLabel}>COSTS</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Energy Costs</Text>
-                  <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.revenue?.totalEnergyCost ?? 0)}</Text>
+                  <Text style={styles.rowLabel}>Annual Delivery Cost</Text>
+                  <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.yearly.totalEvPirCost)}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Annual Supply Cost</Text>
+                  <Text style={[styles.rowValue, styles.revenueNegative]}>-{formatCurrency(results.yearly.totalSupplyCharge)}</Text>
+                </View>
+                {/* Spacer rows to align with Winter DELIVERY section */}
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
+                </View>
+                <View style={[styles.row, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.rowLabel}> </Text>
+                  <Text style={styles.rowValue}> </Text>
                 </View>
 
                 <Text style={styles.sectionLabel}>PROFITABILITY</Text>
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Annual Cust Rev</Text>
-                  <Text style={styles.rowValue}>{formatCurrency(results.revenue?.customerNetChargingRevenue ?? 0)}</Text>
-                </View>
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Monthly Cust Rev</Text>
-                  <Text style={styles.rowValue}>{formatCurrency((results.revenue?.customerNetChargingRevenue ?? 0) / 12)}</Text>
+                  <Text style={styles.rowLabel}>Annual Cust Profit</Text>
+                  <Text style={[styles.rowValue, (results.revenue?.customerFinalRevenue ?? 0) >= 0 ? styles.revenuePositive : styles.revenueNegative]}>{formatCurrency(results.revenue?.customerFinalRevenue ?? 0)}</Text>
                 </View>
 
                 {/* Monthly Cust Profit - Dark Green - aligned with Monthly row in Winter */}
@@ -763,10 +762,10 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
 
         {/* Monthly Cost & Profit Chart */}
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Monthly Cost vs Profit & Running Net Revenue</Text>
+          <Text style={styles.chartTitle}>Monthly Cost vs Customer Profit</Text>
           <View style={styles.chartWrapper}>
             <View style={styles.chartArea}>
-              {monthlyDataWithCumulative.map((month, idx) => {
+              {monthlyData.map((month, idx) => {
                 const costTotal = month.delivery + month.supply;
                 const costHeight = (costTotal / maxBarValue) * 100;
                 const deliveryHeight = costTotal > 0 ? (month.delivery / costTotal) * 100 : 0;
@@ -774,17 +773,12 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                 const profitHeight = (Math.abs(month.profit) / maxBarValue) * 100;
                 const isProfitPositive = month.profit >= 0;
 
-                // Calculate running net revenue line position (0-100% where position reflects cumulative value)
-                const revenueRange = maxCumulativeRevenue - minCumulativeRevenue;
-                const linePosition = revenueRange > 0
-                  ? ((month.cumulativeNetRevenue - minCumulativeRevenue) / revenueRange) * 70 + 10 // 10-80% range
-                  : 50;
-
                 // Format as short currency (no cents for larger values)
                 const formatShort = (val: number) => {
                   if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(1)}k`;
                   return `$${Math.round(val)}`;
                 };
+
                 return (
                   <View
                     key={idx}
@@ -794,34 +788,25 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                     ]}
                   >
                     <View style={styles.chartBarWrapper}>
-                      {/* Running net revenue point */}
-                      <View style={{
-                        position: 'absolute',
-                        bottom: `${linePosition}%`,
-                        left: '50%',
-                        marginLeft: -3,
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: '#f59e0b',
-                        zIndex: 10,
-                      }} />
-
-                      <Text style={[styles.chartValueLabel, { fontSize: 5 }]}>{formatShort(month.cumulativeNetRevenue)}</Text>
-
-                      {/* Cost and Profit bars side by side */}
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: '85%', gap: 1 }}>
-                        {/* Cost bar (stacked) */}
-                        <View style={[styles.chartBar, { height: `${costHeight}%`, width: 10 }]}>
-                          <View style={[styles.chartBarSupply, { height: `${supplyHeight}%` }]} />
-                          <View style={[styles.chartBarDelivery, { height: `${deliveryHeight}%` }]} />
+                      {/* Cost and Profit bars side by side, each with label above */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: '100%', gap: 1 }}>
+                        {/* Cost bar with label */}
+                        <View style={{ alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                          <Text style={[styles.chartValueLabel, { fontSize: 5, marginBottom: 1 }]}>{formatShort(costTotal)}</Text>
+                          <View style={[styles.chartBar, { height: `${costHeight * 0.85}%`, width: 10 }]}>
+                            <View style={[styles.chartBarSupply, { height: `${supplyHeight}%` }]} />
+                            <View style={[styles.chartBarDelivery, { height: `${deliveryHeight}%` }]} />
+                          </View>
                         </View>
-                        {/* Monthly Profit bar */}
-                        <View style={[styles.chartBar, { height: `${profitHeight}%`, width: 10 }]}>
-                          <View style={[
-                            isProfitPositive ? styles.chartBarRevenue : { backgroundColor: '#ef4444', width: '100%' },
-                            { height: '100%' }
-                          ]} />
+                        {/* Monthly Profit bar with label */}
+                        <View style={{ alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                          <Text style={[styles.chartValueLabel, { fontSize: 5, marginBottom: 1, color: isProfitPositive ? '#166534' : '#dc2626' }]}>{formatShort(month.profit)}</Text>
+                          <View style={[styles.chartBar, { height: `${profitHeight * 0.85}%`, width: 10 }]}>
+                            <View style={[
+                              isProfitPositive ? styles.chartBarRevenue : { backgroundColor: '#ef4444', width: '100%' },
+                              { height: '100%' }
+                            ]} />
+                          </View>
                         </View>
                       </View>
                     </View>
@@ -847,10 +832,6 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
             <View style={styles.legendItem}>
               <View style={[styles.legendBox, { backgroundColor: '#4CBC88' }]} />
               <Text style={styles.legendText}>Monthly Profit</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendBox, { backgroundColor: '#f59e0b', borderRadius: 4 }]} />
-              <Text style={styles.legendText}>Running Net Revenue</Text>
             </View>
           </View>
         </View>
