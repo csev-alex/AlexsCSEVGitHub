@@ -973,21 +973,21 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                             backgroundColor: '#4b5563',
                           }} />
 
-                          {/* Charging profit bar with label - color matches bar */}
+                          {/* Charging profit bar with label - purple to match Charging Revenue header */}
                           <View style={{
                             position: 'absolute',
                             top: `${Math.min(supplyY, chargingY)}%`,
                             height: `${Math.max(Math.abs(chargingY - supplyY), 2)}%`,
                             left: startX + 2 * (barWidth + barGap),
                             width: barWidth,
-                            backgroundColor: month.profit >= 0 ? '#4CBC88' : '#ef4444',
+                            backgroundColor: month.profit >= 0 ? '#a36eff' : '#ef4444',
                           }} />
                           <Text style={{
                             position: 'absolute',
                             top: month.profit >= 0 ? `${Math.max(chargingY - 8, 1)}%` : `${Math.min(chargingY + 1, 88)}%`,
                             left: startX + 2 * (barWidth + barGap) - 2,
                             fontSize: 5,
-                            color: month.profit >= 0 ? '#276347' : '#ef4444',
+                            color: month.profit >= 0 ? '#7c3aed' : '#ef4444',
                           }}>{formatShort(month.profit)}</Text>
 
                           {/* Booking profit bar with label - color matches bar */}
@@ -1049,7 +1049,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({ results }) => {
                     <Text style={styles.legendText}>Supply</Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendBox, { backgroundColor: monthlyProfit >= 0 ? '#4CBC88' : '#ef4444' }]} />
+                    <View style={[styles.legendBox, { backgroundColor: monthlyProfit >= 0 ? '#a36eff' : '#ef4444' }]} />
                     <Text style={styles.legendText}>Charging Net</Text>
                   </View>
                   {isHotel && (
